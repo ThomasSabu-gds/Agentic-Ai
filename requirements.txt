@@ -1,0 +1,6 @@
+autogen
+flask
+autogen-agentchat
+openai
+gunicorn
+azure-data-tables>=12.7.0
