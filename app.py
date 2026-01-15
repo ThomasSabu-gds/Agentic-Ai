@@ -21,7 +21,6 @@ try:
 except Exception:
     pass
 
-
 # Routes
 
 @app.route("/", methods=["GET", "POST"])
@@ -98,5 +97,3 @@ def save_agent_to_db(table_client, row_key, prompt, model="gpt-4.1-mini"):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
-
- 
