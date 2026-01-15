@@ -5,5 +5,3 @@ openai
 gunicorn
 azure-data-tables>=12.7.0
 
-sentence-transformers
-scikit-learn
