@@ -4,6 +4,10 @@ from typing import Dict, List
 
 from autogen.agentchat import AssistantAgent
 
+# NEW IMPORTS (ONLY ADDITION)
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
+
 
 # MODEL REGISTRY
 
@@ -98,17 +102,33 @@ def extract_plan(text: str) -> List[str]:
     return plan
 
 
-# CONFIDENCE (BACKEND, DETERMINISTIC)
+# =========================================================
+# ✅ UPDATED CONFIDENCE (SEMANTIC, DETERMINISTIC)
+# =========================================================
+
+# Load embedding model once (important for performance)
+_EMBEDDING_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
 
 def compute_confidence(task: str, agent_prompt: str) -> str:
-    task_words = set(task.lower().split())
-    prompt_words = set(agent_prompt.lower().split())
+    """
+    Computes semantic confidence between task and agent prompt
+    using embeddings + cosine similarity.
 
-    overlap = len(task_words & prompt_words)
+    Returns: 'high', 'medium', or 'low'
+    """
 
-    if overlap >= 3:
+    if not task or not agent_prompt:
+        return "low"
+
+    task_vec = _EMBEDDING_MODEL.encode([task])
+    agent_vec = _EMBEDDING_MODEL.encode([agent_prompt])
+
+    score = cosine_similarity(task_vec, agent_vec)[0][0]
+
+    # Thresholds (tunable, but safe defaults)
+    if score >= 0.75:
         return "high"
-    if overlap >= 1:
+    if score >= 0.50:
         return "medium"
     return "low"
 
@@ -196,6 +216,7 @@ AVAILABLE AGENTS:
             system_message=meta["prompt"],
             llm_config=build_llm_config(meta["model"]),
         )
+
         output = agent.generate_reply(
             messages=[{"role": "user", "content": task}]
         )
