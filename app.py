@@ -7,25 +7,42 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "super-secret-key")  # change in prod
 
 
-# Table storage connection
+# -------------------------------
+# Azure Table Storage
+# -------------------------------
+
 AZURE_CONN_STR = os.environ.get(
     "AZURE_STORAGE_CONNECTION_STRING",
     "UseDevelopmentStorage=true"
 )
 TABLE_NAME = "AgentsTable"
 
-# Initialize table client
 service = TableServiceClient.from_connection_string(conn_str=AZURE_CONN_STR)
 table_client = service.get_table_client(TABLE_NAME)
 
-# Ensure table exists
 try:
     table_client.create_table()
 except Exception:
     pass
 
 
+# -------------------------------
+# File validation
+# -------------------------------
+
+ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg", "tiff", "bmp"}
+
+
+def is_allowed_file(filename: str) -> bool:
+    if "." not in filename:
+        return False
+    ext = filename.rsplit(".", 1)[1].lower()
+    return ext in ALLOWED_EXTENSIONS
+
+
+# -------------------------------
 # Routes
+# -------------------------------
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -34,12 +51,26 @@ def index():
 
     if request.method == "POST":
         topic = request.form.get("topic", "").strip()
+        uploaded_file = request.files.get("file")
 
         if not topic:
             flash("Please enter a task.")
             return redirect(url_for("index"))
 
-        result = run_pipeline(topic, table_client)
+        file_bytes = None
+        
+        if uploaded_file and uploaded_file.filename:
+            if not is_allowed_file(uploaded_file.filename):
+                flash("Unsupported file type. Please upload PDF or image files only.")
+                return redirect(url_for("index"))
+
+            file_bytes = uploaded_file.read()
+
+        result = run_pipeline(
+            task=topic,
+            table_client=table_client,
+            file_bytes=file_bytes
+        )
 
     return render_template(
         "index.html",
@@ -64,7 +95,6 @@ def create_agent():
             flash("Agent name and prompt are required.")
             return redirect(url_for("create_agent"))
 
-        # Normalize RowKey
         row_key = agent_name.replace(" ", "")
 
         try:
@@ -73,7 +103,7 @@ def create_agent():
                 row_key,
                 agent_prompt,
                 model,
-                agent_type="llm"   # ✅ DEFAULT FOR USER AGENTS
+                agent_type="llm"
             )
             flash(f"Agent '{agent_name}' created successfully.")
             return redirect(url_for("index"))
@@ -89,7 +119,9 @@ def create_agent():
     )
 
 
+# -------------------------------
 # DB Helper
+# -------------------------------
 
 def save_agent_to_db(
     table_client,
@@ -103,7 +135,7 @@ def save_agent_to_db(
         "RowKey": row_key,
         "prompt": prompt,
         "model": model,
-        "agent_type": agent_type,  # ✅ NEW FIELD
+        "agent_type": agent_type,
         "base_url": os.environ.get("AZURE_OPENAI_BASE_URL", ""),
         "api_version": os.environ.get("DEFAULT_API_VERSION", ""),
         "api_key": ""
@@ -111,7 +143,9 @@ def save_agent_to_db(
     table_client.upsert_entity(entity)
 
 
-# Local Run (Azure uses gunicorn)
+# -------------------------------
+# Local Run
+# -------------------------------
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 8080)))

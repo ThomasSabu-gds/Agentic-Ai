@@ -85,7 +85,7 @@ def build_agent_catalog(agents_meta: Dict[str, dict], file_bytes: Optional[bytes
         if name == "Supervisor":
             continue
 
-        # 🔒 Hide service agents if no file
+        # Hide service agents if no file is uploaded
         if meta.get("agent_type") == "service" and not file_bytes:
             continue
 
@@ -93,7 +93,6 @@ def build_agent_catalog(agents_meta: Dict[str, dict], file_bytes: Optional[bytes
         lines.append(f"- {name}: {role}")
 
     return "\n".join(lines)
-
 
 
 # -------------------------------
@@ -133,6 +132,8 @@ def run_pipeline(
     table_client,
     file_bytes: Optional[bytes] = None
 ) -> dict:
+    print("DEBUG | File uploaded:", bool(file_bytes))
+
 
     if not task or not task.strip():
         return {
@@ -160,10 +161,14 @@ def run_pipeline(
 
     agent_catalog = build_agent_catalog(agents_meta, file_bytes)
 
+    file_flag = "YES" if file_bytes else "NO"
 
     supervisor_input = f"""
 USER TASK:
 {task}
+
+FILE_UPLOADED:
+{file_flag}
 
 AVAILABLE AGENTS:
 {agent_catalog}
@@ -172,6 +177,8 @@ AVAILABLE AGENTS:
     selected = supervisor.generate_reply(
         messages=[{"role": "user", "content": supervisor_input}]
     ).strip()
+    print("DEBUG | Supervisor selected:", selected)
+
 
     if selected == "NONE":
         return {
@@ -187,6 +194,8 @@ AVAILABLE AGENTS:
         }
 
     agent_meta = agents_meta[selected]
+    print("DEBUG | Agent type:", agent_meta["agent_type"])
+
 
     # -------------------------------
     # EXECUTION
