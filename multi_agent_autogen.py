@@ -79,14 +79,21 @@ def load_agents_from_db(table_client) -> Dict[str, dict]:
 # BUILD AGENT CATALOG FOR SUPERVISOR
 # -------------------------------
 
-def build_agent_catalog(agents_meta: Dict[str, dict]) -> str:
+def build_agent_catalog(agents_meta: Dict[str, dict], file_bytes: Optional[bytes]) -> str:
     lines = []
     for name, meta in agents_meta.items():
         if name == "Supervisor":
             continue
+
+        # 🔒 Hide service agents if no file
+        if meta.get("agent_type") == "service" and not file_bytes:
+            continue
+
         role = meta["prompt"].replace("\n", " ").strip()
         lines.append(f"- {name}: {role}")
+
     return "\n".join(lines)
+
 
 
 # -------------------------------
@@ -151,7 +158,8 @@ def run_pipeline(
         llm_config=build_llm_config(supervisor_meta["model"]),
     )
 
-    agent_catalog = build_agent_catalog(agents_meta)
+    agent_catalog = build_agent_catalog(agents_meta, file_bytes)
+
 
     supervisor_input = f"""
 USER TASK:
