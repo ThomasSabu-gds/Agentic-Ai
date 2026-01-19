@@ -2,11 +2,13 @@ import os
 from typing import Dict, Optional
 
 from autogen.agentchat import AssistantAgent
-from azure.ai.formrecognizer import DocumentAnalysisClient
+from azure.ai.documentintelligence import DocumentIntelligenceClient
 from azure.core.credentials import AzureKeyCredential
 
 
+# -------------------------------
 # MODEL REGISTRY
+# -------------------------------
 
 AVAILABLE_MODELS = {
     "gpt-4.1-mini": {
@@ -27,7 +29,9 @@ AVAILABLE_MODELS = {
 }
 
 
+# -------------------------------
 # LLM CONFIG BUILDER
+# -------------------------------
 
 def build_llm_config(model_key: str) -> dict:
     info = AVAILABLE_MODELS[model_key]
@@ -46,7 +50,9 @@ def build_llm_config(model_key: str) -> dict:
     }
 
 
+# -------------------------------
 # LOAD AGENTS FROM AZURE TABLE
+# -------------------------------
 
 def load_agents_from_db(table_client) -> Dict[str, dict]:
     agents = {}
@@ -59,19 +65,19 @@ def load_agents_from_db(table_client) -> Dict[str, dict]:
         if not name.isidentifier():
             continue
 
-        model = ent.get("model", "gpt-4.1-mini")
-
         agents[name] = {
             "name": name,
             "prompt": ent.get("prompt", ""),
-            "model": model,
+            "model": ent.get("model", "gpt-4.1-mini"),
             "agent_type": ent.get("agent_type", "llm"),
         }
 
     return agents
 
 
+# -------------------------------
 # BUILD AGENT CATALOG FOR SUPERVISOR
+# -------------------------------
 
 def build_agent_catalog(agents_meta: Dict[str, dict]) -> str:
     lines = []
@@ -83,13 +89,15 @@ def build_agent_catalog(agents_meta: Dict[str, dict]) -> str:
     return "\n".join(lines)
 
 
+# -------------------------------
 # DOCUMENT INTELLIGENCE HANDLER
+# -------------------------------
 
 def run_document_intelligence(file_bytes: bytes) -> str:
     endpoint = os.environ["AZURE_DI_ENDPOINT"]
     key = os.environ["AZURE_DI_KEY"]
 
-    client = DocumentAnalysisClient(
+    client = DocumentIntelligenceClient(
         endpoint=endpoint,
         credential=AzureKeyCredential(key)
     )
@@ -98,6 +106,7 @@ def run_document_intelligence(file_bytes: bytes) -> str:
         model_id="prebuilt-layout",
         document=file_bytes
     )
+
     result = poller.result()
 
     extracted_lines = []
@@ -108,7 +117,9 @@ def run_document_intelligence(file_bytes: bytes) -> str:
     return "\n".join(extracted_lines)
 
 
-# MAIN PIPELINE (SINGLE AGENT, LLM + DI)
+# -------------------------------
+# MAIN PIPELINE (SINGLE AGENT)
+# -------------------------------
 
 def run_pipeline(
     task: str,
@@ -131,8 +142,7 @@ def run_pipeline(
             "message": "Supervisor agent missing in database."
         }
 
-    # SUPERVISOR — SINGLE AGENT SELECTION
-
+    # Supervisor — single agent selection
     supervisor_meta = agents_meta["Supervisor"]
 
     supervisor = AssistantAgent(
@@ -170,7 +180,9 @@ AVAILABLE AGENTS:
 
     agent_meta = agents_meta[selected]
 
+    # -------------------------------
     # EXECUTION
+    # -------------------------------
 
     if agent_meta["agent_type"] == "service":
         if not file_bytes:
@@ -187,8 +199,7 @@ AVAILABLE AGENTS:
             "output": output,
         }
 
-    # LLM AGENT
-
+    # LLM Agent execution
     agent = AssistantAgent(
         name=agent_meta["name"],
         system_message=agent_meta["prompt"],

@@ -4,4 +4,4 @@ autogen-agentchat
 openai
 gunicorn
 azure-data-tables>=12.7.0
-
+azure-ai-documentintelligence>=1.0.0
