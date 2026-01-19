@@ -110,7 +110,7 @@ def run_document_intelligence(file_bytes: bytes) -> str:
 
     poller = client.begin_analyze_document(
         model_id="prebuilt-layout",
-        document=file_bytes
+        body=file_bytes  # ✅ FIX: body instead of document
     )
 
     result = poller.result()
@@ -121,6 +121,7 @@ def run_document_intelligence(file_bytes: bytes) -> str:
             extracted_lines.append(line.content)
 
     return "\n".join(extracted_lines)
+
 
 
 # -------------------------------
