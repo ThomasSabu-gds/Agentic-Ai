@@ -63,4 +63,4 @@ jobs:
         with:
           app-name: 'multi-agent'
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_FF96E40DEBDD49C7BF85DF8ECB0B94A2 }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_EA47F16B56C64FDDBF7DEDF91DD3BDC3 }}
