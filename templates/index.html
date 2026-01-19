@@ -32,7 +32,7 @@
             box-shadow: 0 4px 15px rgba(255,255,255,0.1);
         }
 
-        input {
+        input[type="text"], input[type="file"] {
             width: 100%;
             padding: 12px;
             margin-top: 12px;
@@ -43,7 +43,7 @@
         button {
             margin-top: 15px;
             padding: 12px 20px;
-            background: #ead707;
+            background: #dbea07;
             color: #000;
             border: none;
             border-radius: 6px;
@@ -71,14 +71,7 @@
             border-radius: 8px;
             font-size: 14px;
             overflow-x: auto;
-        }
-
-        .warning {
-            margin-top: 15px;
-            padding: 12px;
-            background: #fff3cd;
-            border-left: 5px solid #ffcc00;
-            border-radius: 6px;
+            white-space: pre-wrap;
         }
 
         .error {
@@ -113,42 +106,33 @@
     <div class="box">
         <h2>AI Knowledge Engine</h2>
 
-        <form method="POST">
+        <form method="POST" enctype="multipart/form-data">
             <label>Enter Task</label>
             <input
                 type="text"
                 name="topic"
-                placeholder="E.g. generate code for palindrome"
+                placeholder="E.g. Summarize this document"
                 value="{{ topic }}"
                 required
             >
-            <button type="submit">Generate</button>
+
+            <label style="margin-top:10px; display:block;">
+                Upload Document (PDF / Image – optional)
+            </label>
+            <input type="file" name="file">
+
+            <button type="submit">Run</button>
         </form>
 
         {% if result %}
 
             {% if result.status == "success" %}
                 <h3>Output</h3>
+                <pre>{{ result.output }}</pre>
 
-                {% for item in result.results %}
-                    <pre>{{ item.output }}</pre>
-                    <div class="meta">
-                        Agent: <strong>{{ item.agent }}</strong><br>
-                        Confidence: <strong>{{ item.confidence }}</strong>
-                    </div>
-                {% endfor %}
-
-                {% if result.blocked_agents %}
-                    <div class="warning">
-                        ⚠ Some agents were skipped due to low confidence.
-                        <br><br>
-                        {% for a in result.blocked_agents %}
-                            • {{ a.agent }} ({{ a.confidence }})<br>
-                        {% endfor %}
-                        <br>
-                        <a href="{{ url_for('create_agent') }}">➕ Create better agent</a>
-                    </div>
-                {% endif %}
+                <div class="meta">
+                    Agent used: <strong>{{ result.agent }}</strong>
+                </div>
             {% endif %}
 
             {% if result.status == "no_suitable_agent" %}

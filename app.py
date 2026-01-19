@@ -1,17 +1,20 @@
 import os
-import json
 from flask import Flask, render_template, request, redirect, url_for, flash
 from azure.data.tables import TableServiceClient
-from multi_agent_autogen import run_pipeline, load_agents_from_db
+from multi_agent_autogen import run_pipeline
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "super-secret-key")  # change in prod
 
+
 # Table storage connection
-AZURE_CONN_STR = os.environ.get("AZURE_STORAGE_CONNECTION_STRING", "UseDevelopmentStorage=true")
+AZURE_CONN_STR = os.environ.get(
+    "AZURE_STORAGE_CONNECTION_STRING",
+    "UseDevelopmentStorage=true"
+)
 TABLE_NAME = "AgentsTable"
 
-# Initialize table client (will create table if not exists inside helper)
+# Initialize table client
 service = TableServiceClient.from_connection_string(conn_str=AZURE_CONN_STR)
 table_client = service.get_table_client(TABLE_NAME)
 
@@ -20,6 +23,7 @@ try:
     table_client.create_table()
 except Exception:
     pass
+
 
 # Routes
 
@@ -35,7 +39,6 @@ def index():
             flash("Please enter a task.")
             return redirect(url_for("index"))
 
-        #  run_pipeline now returns a STRUCTURED dict
         result = run_pipeline(topic, table_client)
 
     return render_template(
@@ -43,6 +46,7 @@ def index():
         topic=topic,
         result=result
     )
+
 
 @app.route("/create_agent", methods=["GET", "POST"])
 def create_agent():
@@ -64,7 +68,13 @@ def create_agent():
         row_key = agent_name.replace(" ", "")
 
         try:
-            save_agent_to_db(table_client, row_key, agent_prompt, model)
+            save_agent_to_db(
+                table_client,
+                row_key,
+                agent_prompt,
+                model,
+                agent_type="llm"   # ✅ DEFAULT FOR USER AGENTS
+            )
             flash(f"Agent '{agent_name}' created successfully.")
             return redirect(url_for("index"))
         except Exception as e:
@@ -78,14 +88,22 @@ def create_agent():
         allowed_models=allowed_models
     )
 
+
 # DB Helper
 
-def save_agent_to_db(table_client, row_key, prompt, model="gpt-4.1-mini"):
+def save_agent_to_db(
+    table_client,
+    row_key,
+    prompt,
+    model="gpt-4.1-mini",
+    agent_type="llm"
+):
     entity = {
         "PartitionKey": "agents",
         "RowKey": row_key,
         "prompt": prompt,
         "model": model,
+        "agent_type": agent_type,  # ✅ NEW FIELD
         "base_url": os.environ.get("AZURE_OPENAI_BASE_URL", ""),
         "api_version": os.environ.get("DEFAULT_API_VERSION", ""),
         "api_key": ""

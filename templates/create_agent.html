@@ -3,23 +3,83 @@
 <head>
     <title>Create Agent</title>
     <style>
-        body { font-family: Arial; background:#000; padding:40px; display:flex; justify-content:center; color:#fff; }
-        .container { width:100%; max-width:700px; }
-        .box { background:#fff; color:#000; padding:25px; border-radius:12px; }
-        input, textarea, select { width:100%; padding:10px; margin-top:10px; border-radius:6px; border:1px solid #ccc; }
-        button { padding:12px; margin-top:12px; background:#ead707; border:none; border-radius:6px; cursor:pointer; font-weight:bold;}
+        body {
+            font-family: Arial;
+            background:#000;
+            padding:40px;
+            display:flex;
+            justify-content:center;
+            color:#fff;
+        }
+
+        .container {
+            width:100%;
+            max-width:700px;
+        }
+
+        .box {
+            background:#fff;
+            color:#000;
+            padding:25px;
+            border-radius:12px;
+        }
+
+        input, textarea, select {
+            width:100%;
+            padding:10px;
+            margin-top:10px;
+            border-radius:6px;
+            border:1px solid #ccc;
+        }
+
+        button {
+            padding:12px;
+            margin-top:15px;
+            background:#ead707;
+            border:none;
+            border-radius:6px;
+            cursor:pointer;
+            font-weight:bold;
+            width:100%;
+        }
+
+        .note {
+            font-size:13px;
+            color:#555;
+            margin-top:8px;
+        }
+
+        a {
+            color:#0b63d6;
+            font-weight:bold;
+            text-decoration:none;
+        }
     </style>
 </head>
 <body>
+
 <div class="container">
     <div class="box">
         <h2>Create New Agent</h2>
-        <form method="POST" action="/create_agent">
-            <label>Agent Name</label>
-            <input type="text" name="agent_name" value="{{ suggested_name }}" required>
 
-            <label>System Prompt (agent behavior)</label>
-            <textarea name="agent_prompt" rows="6" required>{{ suggested_prompt }}</textarea>
+        <form method="POST" action="/create_agent">
+
+            <label>Agent Name</label>
+            <input
+                type="text"
+                name="agent_name"
+                value="{{ suggested_name }}"
+                placeholder="E.g. Summarizer"
+                required
+            >
+
+            <label>Agent Description / Behavior</label>
+            <textarea
+                name="agent_prompt"
+                rows="6"
+                placeholder="Describe what this agent should do..."
+                required
+            >{{ suggested_prompt }}</textarea>
 
             <label>LLM Model</label>
             <select name="model">
@@ -28,13 +88,20 @@
                 {% endfor %}
             </select>
 
-            <p style="font-size:13px; color:#666;">Note: Only <strong>gpt-4.1-mini</strong> is available now. You can add more models later in backend config.</p>
+            <div class="note">
+                This agent will be used by the Supervisor when it best matches a user task.
+                <br>
+                Only <strong>gpt-4.1-mini</strong> is available right now.
+            </div>
 
             <button type="submit">Create Agent</button>
         </form>
 
-        <p style="margin-top:12px;"><a href="/">Back</a></p>
+        <p style="margin-top:15px;">
+            <a href="/">← Back to Home</a>
+        </p>
     </div>
 </div>
+
 </body>
 </html>
