@@ -109,7 +109,7 @@ def run_document_intelligence(file_bytes: bytes) -> str:
     )
 
     poller = client.begin_analyze_document(
-        model_id="prebuilt-document",
+        model_id="prebuilt-layout",
         body=file_bytes
     )
 
