@@ -117,19 +117,13 @@ def run_document_intelligence(file_bytes: bytes) -> str:
 
     output = []
 
-    # -----------------------
-    # FIELDS (Key-Value pairs)
-    # -----------------------
-    if result.key_value_pairs:
-        output.append("=== FIELDS ===")
-        for kv in result.key_value_pairs:
-            if kv.key and kv.value:
-                output.append(
-                    f"{kv.key.content}: {kv.value.content} "
-                    f"(confidence: {kv.confidence:.2%})"
-                )
+    if result.paragraphs:
+        for p in result.paragraphs:
+            role = p.role if p.role else "paragraph"
+            output.append(f"[{role.upper()}] {p.content}")
 
     return "\n".join(output)
+
 
 
 
