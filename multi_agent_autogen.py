@@ -109,18 +109,28 @@ def run_document_intelligence(file_bytes: bytes) -> str:
     )
 
     poller = client.begin_analyze_document(
-        model_id="prebuilt-layout",
-        body=file_bytes  # ✅ FIX: body instead of document
+        model_id="prebuilt-document",
+        body=file_bytes
     )
 
     result = poller.result()
 
-    extracted_lines = []
-    for page in result.pages:
-        for line in page.lines:
-            extracted_lines.append(line.content)
+    output = []
 
-    return "\n".join(extracted_lines)
+    # -----------------------
+    # FIELDS (Key-Value pairs)
+    # -----------------------
+    if result.key_value_pairs:
+        output.append("=== FIELDS ===")
+        for kv in result.key_value_pairs:
+            if kv.key and kv.value:
+                output.append(
+                    f"{kv.key.content}: {kv.value.content} "
+                    f"(confidence: {kv.confidence:.2%})"
+                )
+
+    return "\n".join(output)
+
 
 
 
