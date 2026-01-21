@@ -69,7 +69,7 @@ def load_agents_from_db(table_client) -> Dict[str, dict]:
             "name": name,
             "prompt": ent.get("prompt", ""),
             "model": ent.get("model", "gpt-4.1-mini"),
-            "agent_type": ent.get("agent_type", "llm"),
+            "agent_type": ent.get("agent_type", "llm"),  # llm | service
         }
 
     return agents
@@ -99,56 +99,28 @@ def build_agent_catalog(
 
 
 # --------------------------------------------------
-# CLEAN FIELD EXTRACTION (IMPORTANT)
+# CLEAN VALUE EXTRACTION (SDK SAFE)
 # --------------------------------------------------
 
 def extract_clean_value(field):
+    """
+    SAFE for azure-ai-formrecognizer 3.3.3
+    Returns only user-meaningful data
+    """
     if field is None:
         return None
 
-    if field.value_type == "string":
-        return field.value_string
+    if field.value is not None:
+        return field.value
 
-    if field.value_type == "number":
-        return field.value_number
+    if field.content:
+        return field.content
 
-    if field.value_type == "date":
-        return field.value_date
-
-    if field.value_type == "time":
-        return field.value_time
-
-    if field.value_type == "currency":
-        return field.value_currency.amount
-
-    if field.value_type == "address":
-        return field.value_address.street_address
-
-    if field.value_type == "array":
-        items = []
-        for item in field.value_array:
-            clean_item = {}
-            for k, v in item.value_object.items():
-                val = extract_clean_value(v)
-                if val is not None:
-                    clean_item[k] = val
-            if clean_item:
-                items.append(clean_item)
-        return items
-
-    if field.value_type == "dictionary":
-        obj = {}
-        for k, v in field.value.items():
-            val = extract_clean_value(v)
-            if val is not None:
-                obj[k] = val
-        return obj
-
-    return field.content
+    return None
 
 
 # --------------------------------------------------
-# FORM RECOGNIZER HANDLER (FILTERED)
+# FORM RECOGNIZER HANDLER (FILTERED OUTPUT)
 # --------------------------------------------------
 
 def run_form_recognizer(
@@ -172,29 +144,22 @@ def run_form_recognizer(
     )
 
     result = poller.result()
-    output = []
+    output_lines = []
 
     for document in result.documents:
-        output.append("=== EXTRACTED FIELDS ===")
+        output_lines.append("=== EXTRACTED FIELDS ===")
 
         for field_name, field in document.fields.items():
             value = extract_clean_value(field)
-
             if value is None:
                 continue
 
-            confidence = (
-                f"{field.confidence:.2%}"
-                if field.confidence is not None
-                else "N/A"
-            )
+            output_lines.append(f"{field_name}: {value}")
 
-            output.append(f"{field_name}: {value} (confidence: {confidence})")
+    if len(output_lines) == 1:
+        output_lines.append("No meaningful fields detected.")
 
-    if not output:
-        output.append("No fields detected.")
-
-    return "\n".join(output)
+    return "\n".join(output_lines)
 
 
 # --------------------------------------------------
@@ -263,7 +228,7 @@ AVAILABLE AGENTS:
     agent_meta = agents_meta[selected_agent]
 
     # --------------------------------------------------
-    # SERVICE AGENT
+    # SERVICE AGENT EXECUTION
     # --------------------------------------------------
 
     if agent_meta["agent_type"] == "service":
@@ -294,7 +259,7 @@ AVAILABLE AGENTS:
         }
 
     # --------------------------------------------------
-    # LLM AGENT
+    # LLM AGENT EXECUTION
     # --------------------------------------------------
 
     agent = AssistantAgent(
