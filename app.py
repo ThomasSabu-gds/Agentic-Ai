@@ -77,7 +77,7 @@ def index():
             task=topic,
             table_client=table_client,
             file_bytes=file_bytes,
-            doc_type=doc_type   # ✅ NEW
+            doc_type=doc_type
         )
 
     return render_template(
