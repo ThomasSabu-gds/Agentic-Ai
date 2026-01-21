@@ -4,7 +4,7 @@ from typing import Dict, Optional
 from autogen.agentchat import AssistantAgent
 from azure.ai.documentintelligence import DocumentIntelligenceClient
 from azure.core.credentials import AzureKeyCredential
-
+from azure.ai.documentintelligence.models import AnalyzeDocumentRequest
 
 # -------------------------------
 # MODEL REGISTRY
@@ -102,28 +102,37 @@ def build_agent_catalog(agents_meta: Dict[str, dict], file_bytes: Optional[bytes
 def run_document_intelligence(file_bytes: bytes) -> str:
     endpoint = os.environ["AZURE_DI_ENDPOINT"]
     key = os.environ["AZURE_DI_KEY"]
- 
+
     client = DocumentIntelligenceClient(
         endpoint=endpoint,
         credential=AzureKeyCredential(key)
     )
- 
+
     poller = client.begin_analyze_document(
-        model_id="prebuilt-layout",
-        body=file_bytes
+        model_id="prebuilt-document",
+        analyze_request=AnalyzeDocumentRequest(
+            bytes_source=file_bytes
+        )
     )
- 
+
     result = poller.result()
- 
+
     output = []
- 
-    if result.paragraphs:
-        for p in result.paragraphs:
-            role = p.role if p.role else "paragraph"
-            output.append(f"[{role.upper()}] {p.content}")
- 
+
+    if result.key_value_pairs:
+        for kv in result.key_value_pairs:
+            if kv.key and kv.value:
+                output.append(
+                    f"{kv.key.content}: {kv.value.content}"
+                )
+
+    if not output:
+        output.append("No fields detected in this document.")
+
     return "\n".join(output)
  
+
+
 
 
 # -------------------------------
