@@ -2,12 +2,13 @@ import os
 from typing import Dict, Optional
 
 from autogen.agentchat import AssistantAgent
-from azure.ai.formrecognizer import DocumentAnalysisClient
+from azure.ai.documentintelligence import DocumentIntelligenceClient
+from azure.ai.documentintelligence.models import AnalyzeDocumentRequest
 from azure.core.credentials import AzureKeyCredential
 
 
 # -------------------------------
-# MODEL REGISTRY
+# MODEL REGISTRY (LLM)
 # -------------------------------
 
 AVAILABLE_MODELS = {
@@ -76,7 +77,7 @@ def load_agents_from_db(table_client) -> Dict[str, dict]:
 
 
 # -------------------------------
-# BUILD AGENT CATALOG FOR SUPERVISOR
+# BUILD AGENT CATALOG
 # -------------------------------
 
 def build_agent_catalog(
@@ -84,12 +85,10 @@ def build_agent_catalog(
     file_bytes: Optional[bytes]
 ) -> str:
     lines = []
-
     for name, meta in agents_meta.items():
         if name == "Supervisor":
             continue
 
-        # Hide service agents if no file uploaded
         if meta.get("agent_type") == "service" and not file_bytes:
             continue
 
@@ -100,54 +99,72 @@ def build_agent_catalog(
 
 
 # -------------------------------
-# DOCUMENT INTELLIGENCE (INVOICE)
+# DOCUMENT INTELLIGENCE HANDLER
 # -------------------------------
 
-def run_document_intelligence(file_bytes: bytes) -> str:
-    endpoint = os.environ["AZURE_DI_ENDPOINT"]
-    key = os.environ["AZURE_DI_KEY"]
+def run_document_intelligence(
+    file_bytes: bytes,
+    doc_type: str
+) -> str:
+    endpoint = os.environ.get("AZURE_DI_ENDPOINT")
+    key = os.environ.get("AZURE_DI_KEY")
 
-    client = DocumentAnalysisClient(
+    if not endpoint or not key:
+        return "Document Intelligence credentials not configured."
+
+    model_map = {
+        "invoice": "prebuilt-invoice",
+        "receipt": "prebuilt-receipt",
+        "identity": "prebuilt-idDocument",
+    }
+
+    model_id = model_map.get(doc_type)
+    if not model_id:
+        return f"Unsupported document type: {doc_type}"
+
+    client = DocumentIntelligenceClient(
         endpoint=endpoint,
         credential=AzureKeyCredential(key)
     )
 
     poller = client.begin_analyze_document(
-        model_id="prebuilt-invoice",
-        document=file_bytes
+        model_id=model_id,
+        analyze_request=AnalyzeDocumentRequest(
+            bytes_source=file_bytes
+        )
     )
 
     result = poller.result()
+
     output = []
+    documents = result.documents or []
 
-    for idx, invoice in enumerate(result.documents):
-        output.append(f"=== INVOICE #{idx + 1} FIELDS ===")
+    if not documents:
+        return "No structured fields detected in this document."
 
-        for field_name, field in invoice.fields.items():
+    for doc in documents:
+        output.append(f"=== {doc_type.upper()} FIELDS ===")
+        for field_name, field in doc.fields.items():
             value = field.value if field.value is not None else "N/A"
             confidence = (
                 f"{field.confidence:.2%}"
                 if field.confidence is not None
                 else "N/A"
             )
-            output.append(
-                f"{field_name}: {value} (confidence: {confidence})"
-            )
-
-    if not output:
-        output.append("No invoice fields detected.")
+            output.append(f"{field_name}: {value} (confidence: {confidence})")
 
     return "\n".join(output)
 
 
 # -------------------------------
-# MAIN PIPELINE (SINGLE AGENT)
+# MAIN PIPELINE
 # -------------------------------
 
 def run_pipeline(
     task: str,
     table_client,
-    file_bytes: Optional[bytes] = None
+    file_bytes: Optional[bytes] = None,
+    doc_type: Optional[str] = None
 ) -> dict:
 
     if not task or not task.strip():
@@ -156,7 +173,6 @@ def run_pipeline(
             "message": "Please provide a task."
         }
 
-    task = task.strip()
     agents_meta = load_agents_from_db(table_client)
 
     if "Supervisor" not in agents_meta:
@@ -182,6 +198,9 @@ USER TASK:
 FILE_UPLOADED:
 {"YES" if file_bytes else "NO"}
 
+DOCUMENT_TYPE:
+{doc_type}
+
 AVAILABLE AGENTS:
 {agent_catalog}
 """.strip()
@@ -206,23 +225,30 @@ AVAILABLE AGENTS:
     agent_meta = agents_meta[selected]
 
     # -------------------------------
-    # EXECUTION
+    # SERVICE AGENT (DI)
     # -------------------------------
 
     if agent_meta["agent_type"] == "service":
-        if not file_bytes:
+        if not file_bytes or not doc_type:
             return {
                 "status": "error",
-                "message": "No document provided for Invoice processing."
+                "message": "Document or document type missing."
             }
 
-        output = run_document_intelligence(file_bytes)
+        output = run_document_intelligence(
+            file_bytes=file_bytes,
+            doc_type=doc_type
+        )
 
         return {
             "status": "success",
             "agent": selected,
             "output": output,
         }
+
+    # -------------------------------
+    # LLM AGENT
+    # -------------------------------
 
     agent = AssistantAgent(
         name=agent_meta["name"],

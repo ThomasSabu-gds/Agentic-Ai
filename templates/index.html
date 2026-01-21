@@ -32,7 +32,9 @@
             box-shadow: 0 4px 15px rgba(255,255,255,0.1);
         }
 
-        input[type="text"], input[type="file"] {
+        input[type="text"],
+        input[type="file"],
+        select {
             width: 100%;
             padding: 12px;
             margin-top: 12px;
@@ -107,19 +109,33 @@
         <h2>AI Knowledge Engine</h2>
 
         <form method="POST" enctype="multipart/form-data">
+
+            <!-- TASK -->
             <label>Enter Task</label>
             <input
                 type="text"
                 name="topic"
-                placeholder="E.g. Summarize this document"
+                placeholder="E.g. Extract fields from this document"
                 value="{{ topic }}"
                 required
             >
 
+            <!-- DOCUMENT TYPE -->
             <label style="margin-top:10px; display:block;">
-                Upload Document (PDF / Image – optional)
+                Select Document Type
             </label>
-            <input type="file" name="file">
+            <select name="doc_type" required>
+                <option value="">-- Select --</option>
+                <option value="invoice">Invoice</option>
+                <option value="receipt">Receipt</option>
+                <option value="identity">Identity Document</option>
+            </select>
+
+            <!-- FILE -->
+            <label style="margin-top:10px; display:block;">
+                Upload Document (PDF / Image)
+            </label>
+            <input type="file" name="file" required>
 
             <button type="submit">Run</button>
         </form>

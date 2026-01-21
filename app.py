@@ -31,6 +31,7 @@ except Exception:
 # -------------------------------
 
 ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg", "tiff", "bmp"}
+ALLOWED_DOC_TYPES = {"invoice", "receipt", "identity"}
 
 
 def is_allowed_file(filename: str) -> bool:
@@ -51,25 +52,32 @@ def index():
 
     if request.method == "POST":
         topic = request.form.get("topic", "").strip()
+        doc_type = request.form.get("doc_type", "").strip()
         uploaded_file = request.files.get("file")
 
         if not topic:
             flash("Please enter a task.")
             return redirect(url_for("index"))
 
-        file_bytes = None
-        
-        if uploaded_file and uploaded_file.filename:
-            if not is_allowed_file(uploaded_file.filename):
-                flash("Unsupported file type. Please upload PDF or image files only.")
-                return redirect(url_for("index"))
+        if doc_type not in ALLOWED_DOC_TYPES:
+            flash("Please select a valid document type.")
+            return redirect(url_for("index"))
 
-            file_bytes = uploaded_file.read()
+        if not uploaded_file or not uploaded_file.filename:
+            flash("Please upload a document.")
+            return redirect(url_for("index"))
+
+        if not is_allowed_file(uploaded_file.filename):
+            flash("Unsupported file type. Please upload PDF or image files only.")
+            return redirect(url_for("index"))
+
+        file_bytes = uploaded_file.read()
 
         result = run_pipeline(
             task=topic,
             table_client=table_client,
-            file_bytes=file_bytes
+            file_bytes=file_bytes,
+            doc_type=doc_type   # ✅ NEW
         )
 
     return render_template(

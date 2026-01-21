@@ -4,4 +4,4 @@ flask
 openai
 gunicorn
 azure-data-tables>=12.7.0
-azure-ai-formrecognizer==3.3.3
+azure-ai-documentintelligence==1.0.1
