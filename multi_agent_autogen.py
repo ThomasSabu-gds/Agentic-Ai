@@ -69,7 +69,7 @@ def load_agents_from_db(table_client) -> Dict[str, dict]:
             "name": name,
             "prompt": ent.get("prompt", ""),
             "model": ent.get("model", "gpt-4.1-mini"),
-            "agent_type": ent.get("agent_type", "llm"),  # llm | service
+            "agent_type": ent.get("agent_type", "llm"),
         }
 
     return agents
@@ -99,7 +99,56 @@ def build_agent_catalog(
 
 
 # --------------------------------------------------
-# FORM RECOGNIZER HANDLER (STABLE)
+# CLEAN FIELD EXTRACTION (IMPORTANT)
+# --------------------------------------------------
+
+def extract_clean_value(field):
+    if field is None:
+        return None
+
+    if field.value_type == "string":
+        return field.value_string
+
+    if field.value_type == "number":
+        return field.value_number
+
+    if field.value_type == "date":
+        return field.value_date
+
+    if field.value_type == "time":
+        return field.value_time
+
+    if field.value_type == "currency":
+        return field.value_currency.amount
+
+    if field.value_type == "address":
+        return field.value_address.street_address
+
+    if field.value_type == "array":
+        items = []
+        for item in field.value_array:
+            clean_item = {}
+            for k, v in item.value_object.items():
+                val = extract_clean_value(v)
+                if val is not None:
+                    clean_item[k] = val
+            if clean_item:
+                items.append(clean_item)
+        return items
+
+    if field.value_type == "dictionary":
+        obj = {}
+        for k, v in field.value.items():
+            val = extract_clean_value(v)
+            if val is not None:
+                obj[k] = val
+        return obj
+
+    return field.content
+
+
+# --------------------------------------------------
+# FORM RECOGNIZER HANDLER (FILTERED)
 # --------------------------------------------------
 
 def run_form_recognizer(
@@ -129,16 +178,18 @@ def run_form_recognizer(
         output.append("=== EXTRACTED FIELDS ===")
 
         for field_name, field in document.fields.items():
-            value = field.value if field.value is not None else "N/A"
+            value = extract_clean_value(field)
+
+            if value is None:
+                continue
+
             confidence = (
                 f"{field.confidence:.2%}"
                 if field.confidence is not None
                 else "N/A"
             )
 
-            output.append(
-                f"{field_name}: {value} (confidence: {confidence})"
-            )
+            output.append(f"{field_name}: {value} (confidence: {confidence})")
 
     if not output:
         output.append("No fields detected.")
@@ -212,7 +263,7 @@ AVAILABLE AGENTS:
     agent_meta = agents_meta[selected_agent]
 
     # --------------------------------------------------
-    # SERVICE AGENT EXECUTION
+    # SERVICE AGENT
     # --------------------------------------------------
 
     if agent_meta["agent_type"] == "service":
@@ -243,7 +294,7 @@ AVAILABLE AGENTS:
         }
 
     # --------------------------------------------------
-    # LLM AGENT EXECUTION
+    # LLM AGENT
     # --------------------------------------------------
 
     agent = AssistantAgent(
