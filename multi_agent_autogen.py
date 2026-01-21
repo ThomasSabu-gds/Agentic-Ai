@@ -4,7 +4,6 @@ from typing import Dict, Optional
 from autogen.agentchat import AssistantAgent
 from azure.ai.documentintelligence import DocumentIntelligenceClient
 from azure.core.credentials import AzureKeyCredential
-from azure.ai.documentintelligence.models import AnalyzeDocumentRequest
 
 # -------------------------------
 # MODEL REGISTRY
@@ -108,11 +107,10 @@ def run_document_intelligence(file_bytes: bytes) -> str:
         credential=AzureKeyCredential(key)
     )
 
+    # ✅ THIS IS THE CRITICAL FIX
     poller = client.begin_analyze_document(
-        model_id="prebuilt-document",
-        analyze_request=AnalyzeDocumentRequest(
-            bytes_source=file_bytes
-        )
+        "prebuilt-document",
+        body=file_bytes
     )
 
     result = poller.result()
@@ -122,16 +120,13 @@ def run_document_intelligence(file_bytes: bytes) -> str:
     if result.key_value_pairs:
         for kv in result.key_value_pairs:
             if kv.key and kv.value:
-                output.append(
-                    f"{kv.key.content}: {kv.value.content}"
-                )
+                output.append(f"{kv.key.content}: {kv.value.content}")
 
     if not output:
         output.append("No fields detected in this document.")
 
     return "\n".join(output)
  
-
 
 
 
