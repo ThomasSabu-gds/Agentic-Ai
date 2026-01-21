@@ -2,8 +2,9 @@ import os
 from typing import Dict, Optional
 
 from autogen.agentchat import AssistantAgent
-from azure.ai.documentintelligence import DocumentIntelligenceClient
+from azure.ai.formrecognizer import DocumentAnalysisClient
 from azure.core.credentials import AzureKeyCredential
+
 
 # -------------------------------
 # MODEL REGISTRY
@@ -78,13 +79,17 @@ def load_agents_from_db(table_client) -> Dict[str, dict]:
 # BUILD AGENT CATALOG FOR SUPERVISOR
 # -------------------------------
 
-def build_agent_catalog(agents_meta: Dict[str, dict], file_bytes: Optional[bytes]) -> str:
+def build_agent_catalog(
+    agents_meta: Dict[str, dict],
+    file_bytes: Optional[bytes]
+) -> str:
     lines = []
+
     for name, meta in agents_meta.items():
         if name == "Supervisor":
             continue
 
-        # Hide service agents if no file is uploaded
+        # Hide service agents if no file uploaded
         if meta.get("agent_type") == "service" and not file_bytes:
             continue
 
@@ -95,39 +100,44 @@ def build_agent_catalog(agents_meta: Dict[str, dict], file_bytes: Optional[bytes
 
 
 # -------------------------------
-# DOCUMENT INTELLIGENCE HANDLER
+# DOCUMENT INTELLIGENCE (INVOICE)
 # -------------------------------
 
 def run_document_intelligence(file_bytes: bytes) -> str:
     endpoint = os.environ["AZURE_DI_ENDPOINT"]
     key = os.environ["AZURE_DI_KEY"]
 
-    client = DocumentIntelligenceClient(
+    client = DocumentAnalysisClient(
         endpoint=endpoint,
         credential=AzureKeyCredential(key)
     )
 
-    # ✅ THIS IS THE CRITICAL FIX
     poller = client.begin_analyze_document(
-        "prebuilt-document",
-        body=file_bytes
+        model_id="prebuilt-invoice",
+        document=file_bytes
     )
 
     result = poller.result()
-
     output = []
 
-    if result.key_value_pairs:
-        for kv in result.key_value_pairs:
-            if kv.key and kv.value:
-                output.append(f"{kv.key.content}: {kv.value.content}")
+    for idx, invoice in enumerate(result.documents):
+        output.append(f"=== INVOICE #{idx + 1} FIELDS ===")
+
+        for field_name, field in invoice.fields.items():
+            value = field.value if field.value is not None else "N/A"
+            confidence = (
+                f"{field.confidence:.2%}"
+                if field.confidence is not None
+                else "N/A"
+            )
+            output.append(
+                f"{field_name}: {value} (confidence: {confidence})"
+            )
 
     if not output:
-        output.append("No fields detected in this document.")
+        output.append("No invoice fields detected.")
 
     return "\n".join(output)
- 
-
 
 
 # -------------------------------
@@ -139,8 +149,6 @@ def run_pipeline(
     table_client,
     file_bytes: Optional[bytes] = None
 ) -> dict:
-    print("DEBUG | File uploaded:", bool(file_bytes))
-
 
     if not task or not task.strip():
         return {
@@ -157,7 +165,6 @@ def run_pipeline(
             "message": "Supervisor agent missing in database."
         }
 
-    # Supervisor — single agent selection
     supervisor_meta = agents_meta["Supervisor"]
 
     supervisor = AssistantAgent(
@@ -168,14 +175,12 @@ def run_pipeline(
 
     agent_catalog = build_agent_catalog(agents_meta, file_bytes)
 
-    file_flag = "YES" if file_bytes else "NO"
-
     supervisor_input = f"""
 USER TASK:
 {task}
 
 FILE_UPLOADED:
-{file_flag}
+{"YES" if file_bytes else "NO"}
 
 AVAILABLE AGENTS:
 {agent_catalog}
@@ -184,8 +189,6 @@ AVAILABLE AGENTS:
     selected = supervisor.generate_reply(
         messages=[{"role": "user", "content": supervisor_input}]
     ).strip()
-    print("DEBUG | Supervisor selected:", selected)
-
 
     if selected == "NONE":
         return {
@@ -201,8 +204,6 @@ AVAILABLE AGENTS:
         }
 
     agent_meta = agents_meta[selected]
-    print("DEBUG | Agent type:", agent_meta["agent_type"])
-
 
     # -------------------------------
     # EXECUTION
@@ -212,7 +213,7 @@ AVAILABLE AGENTS:
         if not file_bytes:
             return {
                 "status": "error",
-                "message": "No document provided for Document Intelligence."
+                "message": "No document provided for Invoice processing."
             }
 
         output = run_document_intelligence(file_bytes)
@@ -223,7 +224,6 @@ AVAILABLE AGENTS:
             "output": output,
         }
 
-    # LLM Agent execution
     agent = AssistantAgent(
         name=agent_meta["name"],
         system_message=agent_meta["prompt"],
