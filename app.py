@@ -2,11 +2,12 @@ import os
 from flask import Flask, render_template, request, redirect, url_for, flash
 from azure.data.tables import TableServiceClient
 from multi_agent_autogen import run_pipeline
+from dotenv import load_dotenv
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "super-secret-key")  # change in prod
 
-
+load_dotenv()
 # -------------------------------
 # Azure Table Storage
 # -------------------------------
@@ -84,6 +85,48 @@ def index():
         "index.html",
         topic=topic,
         result=result
+    )
+
+
+@app.route("/agents", methods=["GET", "POST"])
+def agents_list():
+    allowed_models = ["gpt-4.1-mini"]
+    agents = []
+    
+    try:
+        agents = list(table_client.query_entities("PartitionKey eq 'agents'"))
+    except Exception:
+        pass
+    
+    if request.method == "POST":
+        agent_name = request.form.get("agent_name", "").strip()
+        agent_prompt = request.form.get("agent_prompt", "").strip()
+        model = request.form.get("model", "gpt-4.1-mini")
+
+        if not agent_name or not agent_prompt:
+            flash("Agent name and prompt are required.")
+            return redirect(url_for("agents_list"))
+
+        row_key = agent_name.replace(" ", "")
+
+        try:
+            save_agent_to_db(
+                table_client,
+                row_key,
+                agent_prompt,
+                model,
+                agent_type="llm"
+            )
+            flash(f"Agent '{agent_name}' created successfully.")
+            return redirect(url_for("agents_list"))
+        except Exception as e:
+            flash(f"Failed to create agent: {e}")
+            return redirect(url_for("agents_list"))
+
+    return render_template(
+        "agents.html",
+        agents=agents,
+        allowed_models=allowed_models
     )
 
 
