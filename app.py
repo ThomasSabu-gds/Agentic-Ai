@@ -1,16 +1,22 @@
+
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from azure.data.tables import TableServiceClient
 from multi_agent_autogen import run_pipeline
 from dotenv import load_dotenv
 
+# --------------------------------------------------
+# APP INIT
+# --------------------------------------------------
+
+load_dotenv()
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "super-secret-key")  # change in prod
 
-load_dotenv()
-# -------------------------------
-# Azure Table Storage
-# -------------------------------
+# --------------------------------------------------
+# AZURE TABLE STORAGE
+# --------------------------------------------------
 
 AZURE_CONN_STR = os.environ.get(
     "AZURE_STORAGE_CONNECTION_STRING",
@@ -18,7 +24,7 @@ AZURE_CONN_STR = os.environ.get(
 )
 TABLE_NAME = "AgentsTable"
 
-service = TableServiceClient.from_connection_string(conn_str=AZURE_CONN_STR)
+service = TableServiceClient.from_connection_string(AZURE_CONN_STR)
 table_client = service.get_table_client(TABLE_NAME)
 
 try:
@@ -26,13 +32,13 @@ try:
 except Exception:
     pass
 
+# --------------------------------------------------
+# FILE VALIDATION
+# --------------------------------------------------
 
-# -------------------------------
-# File validation
-# -------------------------------
+ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg", "tiff", "bmp", "docx"}
+ALLOWED_DOC_TYPES = {"invoice", "receipt", "identity", "summary"}
 
-ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg", "tiff", "bmp"}
-ALLOWED_DOC_TYPES = {"invoice", "receipt", "identity"}
 
 
 def is_allowed_file(filename: str) -> bool:
@@ -42,9 +48,14 @@ def is_allowed_file(filename: str) -> bool:
     return ext in ALLOWED_EXTENSIONS
 
 
-# -------------------------------
-# Routes
-# -------------------------------
+def is_ajax_request(req) -> bool:
+    # fetch() commonly sends this header; we add it from JS
+    return req.headers.get("X-Requested-With") == "XMLHttpRequest"
+
+
+# --------------------------------------------------
+# MAIN ROUTE
+# --------------------------------------------------
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -52,34 +63,67 @@ def index():
     result = None
 
     if request.method == "POST":
-        topic = request.form.get("topic", "").strip()
-        doc_type = request.form.get("doc_type", "").strip()
-        uploaded_file = request.files.get("file")
+        try:
+            topic = request.form.get("topic", "").strip()
+            doc_type = request.form.get("doc_type", "").strip()
+            uploaded_file = request.files.get("file")
 
-        if not topic:
-            flash("Please enter a task.")
-            return redirect(url_for("index"))
+            if not topic:
+                msg = "Please enter a task."
+                if is_ajax_request(request):
+                    return jsonify({"status": "error", "message": msg}), 400
+                flash(msg)
+                return redirect(url_for("index"))
 
-        if doc_type not in ALLOWED_DOC_TYPES:
-            flash("Please select a valid document type.")
-            return redirect(url_for("index"))
+            # Document type is OPTIONAL for LLM agents
+            if uploaded_file and uploaded_file.filename and doc_type and doc_type not in ALLOWED_DOC_TYPES:
+                msg = "Please select a valid document type."
+                if is_ajax_request(request):
+                    return jsonify({"status": "error", "message": msg}), 400
+                flash(msg)
+                return redirect(url_for("index"))
 
-        if not uploaded_file or not uploaded_file.filename:
-            flash("Please upload a document.")
-            return redirect(url_for("index"))
+            file_bytes = None
+            filename = None
 
-        if not is_allowed_file(uploaded_file.filename):
-            flash("Unsupported file type. Please upload PDF or image files only.")
-            return redirect(url_for("index"))
+            if uploaded_file and uploaded_file.filename:
+                filename = uploaded_file.filename
 
-        file_bytes = uploaded_file.read()
+                if not is_allowed_file(uploaded_file.filename):
+                    msg = "Unsupported file type."
+                    if is_ajax_request(request):
+                        return jsonify({"status": "error", "message": msg}), 400
+                    flash(msg)
+                    return redirect(url_for("index"))
 
-        result = run_pipeline(
-            task=topic,
-            table_client=table_client,
-            file_bytes=file_bytes,
-            doc_type=doc_type
-        )
+                file_bytes = uploaded_file.read()
+
+            result = run_pipeline(
+                task=topic,
+                table_client=table_client,
+                file_bytes=file_bytes,
+                doc_type=doc_type if file_bytes else None,
+                filename=filename
+            )
+
+            # Make sure result is dict-like
+            if not isinstance(result, dict):
+                result = {"status": "success", "output": result}
+
+            # Attach filename for UI
+            if filename:
+                result["filename"] = filename
+
+            # If AJAX, return JSON (no page reload)
+            if is_ajax_request(request):
+                return jsonify(result)
+
+        except Exception as e:
+            # Return proper error for AJAX or normal render for classic
+            err = {"status": "error", "message": f"Internal error: {str(e)}"}
+            if is_ajax_request(request):
+                return jsonify(err), 500
+            result = err
 
     return render_template(
         "index.html",
@@ -88,16 +132,20 @@ def index():
     )
 
 
+# --------------------------------------------------
+# AGENTS LIST
+# --------------------------------------------------
+
 @app.route("/agents", methods=["GET", "POST"])
 def agents_list():
     allowed_models = ["gpt-4.1-mini"]
     agents = []
-    
+
     try:
         agents = list(table_client.query_entities("PartitionKey eq 'agents'"))
     except Exception:
         pass
-    
+
     if request.method == "POST":
         agent_name = request.form.get("agent_name", "").strip()
         agent_prompt = request.form.get("agent_prompt", "").strip()
@@ -118,10 +166,10 @@ def agents_list():
                 agent_type="llm"
             )
             flash(f"Agent '{agent_name}' created successfully.")
-            return redirect(url_for("agents_list"))
         except Exception as e:
             flash(f"Failed to create agent: {e}")
-            return redirect(url_for("agents_list"))
+
+        return redirect(url_for("agents_list"))
 
     return render_template(
         "agents.html",
@@ -130,49 +178,9 @@ def agents_list():
     )
 
 
-@app.route("/create_agent", methods=["GET", "POST"])
-def create_agent():
-    suggested_name = request.args.get("name", "")
-    suggested_prompt = request.args.get("prompt", "")
-
-    allowed_models = ["gpt-4.1-mini"]
-
-    if request.method == "POST":
-        agent_name = request.form.get("agent_name", "").strip()
-        agent_prompt = request.form.get("agent_prompt", "").strip()
-        model = request.form.get("model", "gpt-4.1-mini")
-
-        if not agent_name or not agent_prompt:
-            flash("Agent name and prompt are required.")
-            return redirect(url_for("create_agent"))
-
-        row_key = agent_name.replace(" ", "")
-
-        try:
-            save_agent_to_db(
-                table_client,
-                row_key,
-                agent_prompt,
-                model,
-                agent_type="llm"
-            )
-            flash(f"Agent '{agent_name}' created successfully.")
-            return redirect(url_for("index"))
-        except Exception as e:
-            flash(f"Failed to create agent: {e}")
-            return redirect(url_for("create_agent"))
-
-    return render_template(
-        "create_agent.html",
-        suggested_name=suggested_name,
-        suggested_prompt=suggested_prompt,
-        allowed_models=allowed_models
-    )
-
-
-# -------------------------------
-# DB Helper
-# -------------------------------
+# --------------------------------------------------
+# DB HELPER
+# --------------------------------------------------
 
 def save_agent_to_db(
     table_client,
@@ -193,10 +201,12 @@ def save_agent_to_db(
     }
     table_client.upsert_entity(entity)
 
-
-# -------------------------------
-# Local Run
-# -------------------------------
+# --------------------------------------------------
+# LOCAL RUN
+# --------------------------------------------------
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
+
+
+

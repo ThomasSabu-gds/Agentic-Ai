@@ -1,602 +1,256 @@
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <title>AI Knowledge Engine</title>
+
     <style>
         :root {
-            --bg-primary: #000;
-            --bg-secondary: #000;
-            --text-primary: #fff;
-            --text-secondary: #888;
-            --text-tertiary: #555;
-            --border-color: #222;
-            --accent-color: #FFE600;
-            --accent-dark: #D4B200;
-            --input-bg: transparent;
-        }
-        /* #FFE600 */
-
-        body.light-theme {
-            --bg-primary: #000;
-            --bg-secondary: #f5f5f5;
+            --bg-page: #f4f5f7;
+            --bg-card: #ffffff;
             --text-primary: #1a1a1a;
-            --text-secondary: #666;
-            --text-tertiary: #999;
-            --border-color: #e0e0e0;
-            --accent-color: #FFE600;
-            --accent-dark: #D4B200;
-            --input-bg: #efefef;
+            --text-secondary: #5f6368;
+            --border-color: #dcdcdc;
+            --accent: #ffe600;
+            --accent-dark: #e6cf00;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
-            background: var(--bg-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: var(--bg-page);
+            color: var(--text-primary);
             min-height: 100vh;
+        }
+
+        /* ================= HEADER ================= */
+
+        .app-header {
+            background: #000;
+            color: #fff;
+            padding: 16px 32px;
             display: flex;
-            justify-content: center;
             align-items: center;
-            padding: 20px;
-            zoom: 80%;
-            transition: background-color 0.3s ease;
+            justify-content: space-between;
         }
 
-        ::-webkit-scrollbar {
-            width: 8px;
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 16px;
         }
 
-        ::-webkit-scrollbar-track {
-            background: var(--bg-primary);
+        .brand img { height: 44px; }
+
+        .brand h1 {
+            font-size: 18px;
+            font-weight: 600;
         }
 
-        ::-webkit-scrollbar-thumb {
-            background: #333;
-            border-radius: 4px;
+        .header-actions a { text-decoration: none; }
+
+        .header-actions button {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            text-transform: uppercase;
         }
 
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555;
+        .header-actions button:hover { background: var(--accent-dark); }
+
+        /* ================= LAYOUT ================= */
+
+        .page {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
         }
 
-        body.light-theme ::-webkit-scrollbar-track {
-            background: #f0f0f0;
-        }
-
-        body.light-theme ::-webkit-scrollbar-thumb {
-            background: #c0c0c0;
-        }
-
-        body.light-theme ::-webkit-scrollbar-thumb:hover {
-            background: #a0a0a0;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 900px;
-        }
-
-        .logo-box {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .logo-box img {
-            width: 120px;
-            opacity: 0.9;
-            transition: opacity 0.3s ease;
-        }
-
-        .logo-box img:hover {
-            opacity: 1;
-        }
-
-        .box {
-            background: var(--bg-secondary);
-            padding: 40px 35px;
+        .card {
+            background: var(--bg-card);
             border: 1px solid var(--border-color);
             border-radius: 12px;
-            transition: background-color 0.3s ease, border-color 0.3s ease;
-        }
-
-        h2 {
-            color: var(--text-primary);
-            margin-bottom: 8px;
-            font-size: 28px;
-            font-weight: 300;
-            letter-spacing: -0.5px;
-            transition: color 0.3s ease;
-        }
-
-        .subtitle {
-            color: var(--text-secondary);
-            font-size: 13px;
+            padding: 28px;
             margin-bottom: 30px;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            transition: color 0.3s ease;
         }
 
-        .form-group {
-            margin-bottom: 25px;
-        }
+        /* ================= FORM ================= */
+
+        .form-group { margin-bottom: 22px; }
 
         label {
             display: block;
-            color: var(--text-secondary);
             font-size: 12px;
-            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 500;
-            transition: color 0.3s ease;
         }
 
-        input[type="text"],
-        input[type="file"],
-        select {
+        input[type="text"], select, input[type="file"] {
             width: 100%;
-            padding: 12px 0;
-            background: var(--input-bg);
-            border: none;
-            border-bottom: 1px solid var(--border-color);
-            color: var(--text-primary);
+            padding: 12px 14px;
             font-size: 14px;
-            transition: border-color 0.3s ease, color 0.3s ease, background-color 0.3s ease;
-            font-family: inherit;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
         }
 
-        input[type="text"]::placeholder {
-            color: var(--text-tertiary);
-        }
-
-        input[type="text"]:-webkit-autofill,
-        input[type="text"]:-webkit-autofill:hover,
-        input[type="text"]:-webkit-autofill:focus {
-            -webkit-box-shadow: 0 0 0 1000px transparent inset !important;
-            -webkit-text-fill-color: var(--text-primary) !important;
-        }
-
-        input[type="text"]:-webkit-autofill::first-line {
-            color: var(--text-primary);
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--accent);
         }
 
         input[type="file"]::file-selector-button {
-            background: transparent;
-            color: #FFE600;
-            border: 2px solid #FFE600;
-            border-radius: 6px;
-            padding: 8px 16px;
-            margin-right: 10px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 12px;
-            transition: all 0.3s ease;
-        }
-
-        input[type="file"]::file-selector-button:hover,
-        input[type="file"]::file-selector-button:active {
-            background: #FFE600;
-            color: #000;
-        }
-
-        body.light-theme input[type="file"]::file-selector-button {
-            background: #FFE600;
-            color: #000;
-            border: 2px solid #FFE600;
-        }
-
-        body.light-theme input[type="file"]::file-selector-button:hover,
-        body.light-theme input[type="file"]::file-selector-button:active {
-            background: #D4B200;
-            border-color: #D4B200;
-            color: #000;
-        }
-
-        input[type="text"]:focus,
-        input[type="file"]:focus,
-        select:focus {
-            outline: none;
-            border-bottom-color: var(--accent-color);
-        }
-
-        select {
-            cursor: pointer;
-            appearance: none;
-            padding-right: 0;
-            background-image: none;
-        }
-
-        select option {
-            background: #1a1a1a;
+            background: #000;
             color: #fff;
-        }
-
-        select option:checked {
-            background: var(--accent-color);
-            color: #000;
-        }
-
-        body.light-theme select option {
-            background: #f5f5f5;
-            color: #000;
-        }
-
-        body.light-theme select option:checked {
-            background: var(--accent-color);
-            color: #000;
-        }
-
-        body.light-theme input[type="text"],
-        body.light-theme input[type="file"],
-        body.light-theme select {
-            background: #efefef;
-            color: #1a1a1a;
-        }
-
-        body.light-theme input[type="text"]::placeholder {
-            color: #999;
-        }
-
-        button {
-            width: 100%;
-            padding: 14px 0;
-            background: transparent;
-            color: var(--accent-color);
-            border: 2px solid var(--accent-color);
-            border-radius: 8px;
+            border: none;
+            padding: 8px 14px;
+            margin-right: 12px;
+            border-radius: 4px;
             cursor: pointer;
-            font-weight: 600;
-            font-size: 13px;
-            letter-spacing: 0.5px;
+        }
+
+        .primary-btn {
+            margin-top: 10px;
+            width: 100%;
+            padding: 14px;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
             text-transform: uppercase;
-            margin-top: 25px;
-            transition: all 0.3s ease;
-            font-family: inherit;
         }
 
-        button:hover,
-        button:active {
-            background: var(--accent-color);
-            color: var(--bg-primary);
-        }
+        .primary-btn:hover { background: var(--accent-dark); }
 
-        button:disabled {
-            opacity: 0.6;
+        .primary-btn:disabled {
+            opacity: 0.7;
             cursor: not-allowed;
         }
 
-        body.light-theme button {
-            background: var(--accent-color);
-            color: #000;
-            border: 2px solid var(--accent-color);
-        }
+        /* ================= INLINE LOADER (NEW) ================= */
 
-        body.light-theme button:hover,
-        body.light-theme button:active {
-            background: #D4B200;
-            border-color: #D4B200;
-            color: #000;
-        }
-
-        h3 {
-            color: var(--accent-color);
-            margin-top: 50px;
-            margin-bottom: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        body.light-theme h3 {
-            color: #D4B200;
-        }
-
-        pre {
-            background: var(--bg-primary);
-            color: var(--text-secondary);
-            padding: 20px;
-            border: 1px solid var(--border-color);
-            font-size: 12px;
-            overflow-x: auto;
-            white-space: pre-wrap;
-            font-family: 'Monaco', 'Courier New', monospace;
-            line-height: 1.6;
-            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-        }
-
-        body.light-theme pre {
-            background: #efefef;
-            color: #1a1a1a;
-            border: 1px solid #d0d0d0;
-        }
-
-        .result-tabs {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-            margin-bottom: 20px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .result-tab {
-            padding: 10px 20px;
-            background: transparent;
-            color: var(--accent-color);
-            border: none;
-            border-bottom: 2px solid transparent;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 12px;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            transition: all 0.3s ease;
-        }
-
-        .result-tab:hover {
-            color: var(--accent-color);
-        }
-
-        .result-tab.active {
-            color: var(--accent-color);
-            border-bottom-color: var(--accent-color);
-        }
-
-        body.light-theme .result-tab {
-            color: var(--accent-color);
-            background: transparent;
-            border: none;
-            border-bottom: 2px solid transparent;
-        }
-
-        body.light-theme .result-tab:hover {
-            color: var(--accent-color);
-            border-bottom-color: var(--accent-color);
-        }
-
-        body.light-theme .result-tab.active {
-            color: var(--accent-color);
-            border-bottom-color: var(--accent-color);
-        }
-
-        .tab-content {
+        .inline-loader {
             display: none;
+            margin-top: 14px;
+            align-items: center;
+            gap: 10px;
+            justify-content: center;
+            padding: 12px;
+            border-radius: 8px;
+            background: #fff; /* stays inside the card */
+            border: 1px solid var(--border-color);
         }
 
-        .tab-content.active {
-            display: block;
-        }
-
-        .error {
-            margin-top: 30px;
-            padding: 20px 0;
-            border-top: 1px solid var(--border-color);
-            border-bottom: 1px solid var(--border-color);
-            color: var(--text-secondary);
-            font-size: 13px;
-            transition: border-color 0.3s ease, color 0.3s ease;
-        }
-
-        .error strong {
-            color: var(--text-primary);
-        }
-
-        .meta {
-            margin-top: 15px;
-            font-size: 12px;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            transition: color 0.3s ease;
-        }
-
-        .meta strong {
-            color: var(--accent-color);
-        }
-
-        body.light-theme .meta strong {
-            color: #D4B200;
-        }
-
-        a {
-            color: var(--accent-color);
-            font-weight: 500;
-            text-decoration: none;
-            transition: color 0.3s ease;
-            display: inline-block;
-            margin-top: 15px;
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        a:hover {
-            color: var(--text-primary);
-        }
-
-        body.light-theme a {
-            color: #D4B200;
-        }
-
-        body.light-theme a:hover {
-            color: #1a1a1a;
-        }
-
-        .result-box {
-            margin-top: 40px;
-        }
-
-        .success-badge {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            background: var(--text-secondary);
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-
-        .error-badge {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            background: #ff6b6b;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-
-        .theme-toggle {
-            padding: 0;
-            background: transparent;
-            color: var(--accent-color);
-            border: none;
-            border-radius: 0;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 20px;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            transition: all 0.3s ease;
-            width: auto;
-            margin-top: 0;
-            margin-right: 15px;
-            display: inline-block;
-        }
-
-        .theme-toggle:hover {
-            transform: scale(1.2);
-        }
+        .inline-loader.active { display: flex; }
 
         .spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid var(--border-color);
-            border-top: 2px solid var(--accent-color);
-            border-radius: 50%;
-            animation: spin 0.6s linear infinite;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .loading-indicator {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            color: var(--text-secondary);
-            font-size: 13px;
-        }
-
-        .loader-container {
-            text-align: center;
-            padding: 40px 20px;
-        }
-
-        .loader-large {
-            display: inline-block;
-            width: 40px;
-            height: 40px;
-            border: 3px solid var(--border-color);
-            border-top: 3px solid var(--accent-color);
+            width: 18px;
+            height: 18px;
+            border: 3px solid #e6e6e6;
+            border-top-color: #000; /* black circle */
             border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
 
-        .theme-toggle-wrapper {
-            position: fixed;
-            top: 25px;
-            right: 20px;
-            z-index: 1000;
-        }
-
-        .agents-btn-wrapper {
-            position: fixed;
-            top: 10px;
-            right: 70px;
-            z-index: 1000;
-        }
-
-        .agents-btn {
-            padding: 10px 20px;
-            background: transparent;
-            color: var(--accent-color);
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
+        .loader-text {
             font-size: 12px;
-            letter-spacing: 0.5px;
+            font-weight: 700;
+            color: #000;
             text-transform: uppercase;
-            transition: all 0.3s ease;
-            white-space: nowrap;
-            margin-top: 0;
+            letter-spacing: 0.3px;
         }
 
-        .agents-btn:hover,
-        .agents-btn:active {
-            background: var(--accent-color);
-            color: #000;
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ================= RESULT ================= */
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
         }
 
-        body.light-theme .agents-btn {
-            background: transparent;
-            color: var(--accent-color);
-            border: none;
+        .result-header h3 {
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-secondary);
         }
 
-        body.light-theme .agents-btn:hover,
-        body.light-theme .agents-btn:active {
-            background: var(--accent-color);
-            color: #000;
+        .agent-badge {
+            font-size: 12px;
+            background: #000;
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 6px;
         }
 
-        body.light-theme .theme-toggle {
-            color: #D4B200;
+        .file-meta {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
         }
+
+        pre {
+            background: #f9f9f9;
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+
+        .error {
+            color: #c62828;
+            font-size: 14px;
+            margin-top: 16px;
+        }
+
+        /* Hide result container until we have data */
+        #resultCard { display: none; }
+        #errorCard  { display: none; }
     </style>
 </head>
+
 <body>
 
-<div class="theme-toggle-wrapper">
-    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Theme" style="border: none; padding: 0; background: transparent;">
-        <span id="theme-icon">🌙</span>
-    </button>
-</div>
-
-<div class="agents-btn-wrapper">
-    <a href="{{ url_for('agents_list') }}" style="text-decoration: none;">
-        <button class="agents-btn">Agents</button>
-    </a>
-</div>
-
-<div class="container">
-
-    <div class="logo-box">
+<header class="app-header">
+    <div class="brand">
         <img src="/static/EY_Logo 2.png" alt="EY Logo">
+        <h1>AI Knowledge Engine</h1>
     </div>
 
-    <div class="box">
-        <h2>AI Knowledge Engine</h2>
-        <p class="subtitle">Document Analysis Platform</p>
+    <div class="header-actions">
+        <a href="{{ url_for('agents_list') }}">
+            <button type="button">Agents</button>
+        </a>
+    </div>
+</header>
 
-        <form method="POST" enctype="multipart/form-data" id="analysisForm">
+<div class="page">
+
+    <div class="card">
+        <form method="POST" enctype="multipart/form-data" id="analyzeForm">
 
             <div class="form-group">
                 <label>Task</label>
                 <input
                     type="text"
                     name="topic"
-                    placeholder="What would you like to extract?"
+                    placeholder="E.g. Extract invoice details and summarize"
                     value="{{ topic }}"
                     required
                 >
@@ -604,143 +258,172 @@
 
             <div class="form-group">
                 <label>Document Type</label>
-                <select name="doc_type" required>
-                    <option value="">Select type</option>
+                <select name="doc_type">
+                    <option value="">Select document type</option>
                     <option value="invoice">Invoice</option>
                     <option value="receipt">Receipt</option>
                     <option value="identity">Identity Document</option>
+                    <option value="summary">Summarize Document</option>
+
                 </select>
             </div>
 
             <div class="form-group">
-                <label>Document</label>
-                <input type="file" name="file" required>
+                <label>Upload Document</label>
+                <input type="file" name="file">
             </div>
 
-            <button type="submit" id="analyzeBtn">Analyze</button>
+            <button type="submit" class="primary-btn" id="analyzeBtn">Analyze</button>
+
+            <!-- Inline loader directly under Analyze button -->
+            <div id="inlineLoader" class="inline-loader">
+                <div class="spinner"></div>
+                <div class="loader-text">Processing...</div>
+            </div>
         </form>
+    </div>
 
-        <div id="loadingIndicator" style="display: none;">
-            <div class="loader-container">
-                <div class="loader-large"></div>
-                <p style="margin-top: 15px; color: var(--text-secondary);">Analyzing document...</p>
-            </div>
+    <!-- Result card (filled by JS) -->
+    <div class="card" id="resultCard">
+        <div class="result-header">
+            <h3>Analysis Result</h3>
+            <span class="agent-badge" id="agentBadge"></span>
         </div>
 
-        {% if result %}
+        <div class="file-meta" id="fileMeta" style="display:none;">
+            Uploaded file: <strong id="fileName"></strong>
+        </div>
 
-            {% if result.status == "success" %}
-                <div class="result-box">
-                    <h3><span class="success-badge"></span>Result</h3>
-                    
-                    <div class="result-tabs">
-                        <button class="result-tab active" data-tab="raw" onclick="switchTab('raw')">Raw</button>
-                        <button class="result-tab" data-tab="contents" onclick="switchTab('contents')">Contents</button>
-                    </div>
-
-                    <div id="raw" class="tab-content active">
-                        <pre>{{ result.output.raw_slim | string }}</pre>
-                    </div>
-
-                    <div id="contents" class="tab-content">
-                        <pre>{{ result.output.flat_values | string }}</pre>
-                    </div>
-
-                    <div class="meta">
-                        Agent: <strong>{{ result.agent }}</strong>
-                    </div>
-                </div>
-            {% endif %}
-
-            {% if result.status == "no_suitable_agent" %}
-                <div class="result-box">
-                    <div class="error">
-                        <span class="error-badge"></span>
-                        <strong>No agent available</strong> for this task.
-                        <br>
-                        <a href="{{ url_for('create_agent') }}">Create Agent</a>
-                    </div>
-                </div>
-            {% endif %}
-
-            {% if result.status == "error" %}
-                <div class="result-box">
-                    <div class="error">
-                        <span class="error-badge"></span>
-                        <strong>Error:</strong> {{ result.message }}
-                    </div>
-                </div>
-            {% endif %}
-
-        {% endif %}
+        <pre id="resultOutput"></pre>
     </div>
+
+    <!-- Error card (filled by JS) -->
+    <div class="card" id="errorCard">
+        <div class="error" id="errorMsg"></div>
+    </div>
+
+    <!-- Optional: still supports server-rendered result if you reload without JS -->
+    {% if result %}
+        {% if result.status == "success" %}
+            <div class="card">
+                <div class="result-header">
+                    <h3>Analysis Result</h3>
+                    <span class="agent-badge">{{ result.agent }}</span>
+                </div>
+
+                {% if result.filename %}
+                    <div class="file-meta">
+                        Uploaded file: <strong>{{ result.filename }}</strong>
+                    </div>
+                {% endif %}
+
+                <pre>{{ result.output | safe }}</pre>
+            </div>
+        {% endif %}
+
+        {% if result.status == "error" %}
+            <div class="card">
+                <div class="error">{{ result.message }}</div>
+            </div>
+        {% endif %}
+    {% endif %}
+
 </div>
 
 <script>
-    // Tab Switching Functionality
-    function switchTab(tabName) {
-        // Hide all tab contents
-        const tabContents = document.querySelectorAll('.tab-content');
-        tabContents.forEach(tab => tab.classList.remove('active'));
+(function () {
+    const form = document.getElementById("analyzeForm");
+    const btn = document.getElementById("analyzeBtn");
+    const loader = document.getElementById("inlineLoader");
 
-        // Remove active class from all tabs
-        const tabs = document.querySelectorAll('.result-tab');
-        tabs.forEach(tab => tab.classList.remove('active'));
+    const resultCard = document.getElementById("resultCard");
+    const agentBadge = document.getElementById("agentBadge");
+    const fileMeta = document.getElementById("fileMeta");
+    const fileName = document.getElementById("fileName");
+    const resultOutput = document.getElementById("resultOutput");
 
-        // Show selected tab content
-        const selectedContent = document.getElementById(tabName);
-        if (selectedContent) {
-            selectedContent.classList.add('active');
+    const errorCard = document.getElementById("errorCard");
+    const errorMsg = document.getElementById("errorMsg");
+
+    if (!form) return;
+
+    function showLoader() {
+        loader.classList.add("active");
+        btn.disabled = true;
+    }
+
+    function hideLoader() {
+        loader.classList.remove("active");
+        btn.disabled = false;
+    }
+
+    function showError(message) {
+        errorMsg.textContent = message || "Something went wrong.";
+        errorCard.style.display = "block";
+        resultCard.style.display = "none";
+    }
+
+    function showResult(data) {
+        errorCard.style.display = "none";
+        resultCard.style.display = "block";
+
+        agentBadge.textContent = data.agent || "Agent";
+
+        if (data.filename) {
+            fileName.textContent = data.filename;
+            fileMeta.style.display = "block";
+        } else {
+            fileMeta.style.display = "none";
         }
 
-        // Add active class to clicked tab
-        const selectedTab = document.querySelector(`.result-tab[data-tab="${tabName}"]`);
-        if (selectedTab) {
-            selectedTab.classList.add('active');
+        // Pretty print output
+        const out = data.output ?? data;
+        try {
+            resultOutput.textContent = (typeof out === "string")
+                ? out
+                : JSON.stringify(out, null, 2);
+        } catch (e) {
+            resultOutput.textContent = String(out);
         }
     }
 
-    // Theme Toggle Functionality
-    function toggleTheme() {
-        const body = document.body;
-        const themeIcon = document.getElementById('theme-icon');
-        
-        if (body.classList.contains('light-theme')) {
-            body.classList.remove('light-theme');
-            localStorage.setItem('theme', 'dark');
-            themeIcon.textContent = '🌙';
-        } else {
-            body.classList.add('light-theme');
-            localStorage.setItem('theme', 'light');
-            themeIcon.textContent = '☀️';
-        }
-    }
+    form.addEventListener("submit", async function (e) {
+        e.preventDefault(); // ✅ prevent page reload
 
-    // Load saved theme on page load
-    window.addEventListener('DOMContentLoaded', function() {
-        const savedTheme = localStorage.getItem('theme') || 'dark';
-        const body = document.body;
-        const themeIcon = document.getElementById('theme-icon');
-        
-        if (savedTheme === 'light') {
-            body.classList.add('light-theme');
-            themeIcon.textContent = '☀️';
-        } else {
-            themeIcon.textContent = '🌙';
-        }
+        // Hide previous output
+        errorCard.style.display = "none";
+        resultCard.style.display = "none";
 
-        // Form submission with loading indicator
-        const form = document.getElementById('analysisForm');
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        const analyzeBtn = document.getElementById('analyzeBtn');
+        // Show loader inline
+        showLoader();
 
-        if (form) {
-            form.addEventListener('submit', function() {
-                loadingIndicator.style.display = 'block';
-                analyzeBtn.disabled = true;
+        try {
+            const formData = new FormData(form);
+
+            const res = await fetch("/", {
+                method: "POST",
+                body: formData,
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
             });
+
+            const data = await res.json();
+
+            if (!res.ok || data.status === "error") {
+                showError(data.message || "Error while processing.");
+            } else if (data.status === "no_suitable_agent") {
+                showError("No suitable agent found for this task.");
+            } else {
+                showResult(data);
+            }
+        } catch (err) {
+            showError("Network error. Please try again.");
+        } finally {
+            hideLoader();
         }
     });
+})();
 </script>
 
 </body>

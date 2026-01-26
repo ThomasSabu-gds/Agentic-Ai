@@ -5,3 +5,8 @@ openai
 gunicorn
 azure-data-tables>=12.7.0
 azure-ai-formrecognizer==3.3.3
+
+python-docx
+pdfplumber
+pytesseract
+pillow
