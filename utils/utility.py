@@ -126,7 +126,7 @@ def fetch_results(results, doc_type: str) -> Dict[str, Any]:
             "fields": ["FirstName", "LastName", "DateOfBirth", "DocumentNumber", "DateOfExpiration", "Address", "Sex" , "CountryRegion", "Region"],
             "items" : []
             }
-    }
+    } 
 
     for idx, document in enumerate(results.documents):
         for field in fields[doc_type]["fields"]:

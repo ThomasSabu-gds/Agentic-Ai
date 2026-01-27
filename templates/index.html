@@ -2,427 +2,1254 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>AI Knowledge Engine</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 
-    <style>
-        :root {
-            --bg-page: #f4f5f7;
-            --bg-card: #ffffff;
-            --text-primary: #1a1a1a;
-            --text-secondary: #5f6368;
-            --border-color: #dcdcdc;
-            --accent: #ffe600;
-            --accent-dark: #e6cf00;
-        }
+  <title>AI Knowledge Engine</title>
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+  <style>
+    :root {
+      --bg-page: #f4f5f7;
+      --bg-card: #ffffff;
+      --text-primary: #1a1a1a;
+      --text-secondary: #5f6368;
+      --border-color: #dcdcdc;
+      --accent: #ffe600;
+      --accent-dark: #e6cf00;
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background: var(--bg-page);
-            color: var(--text-primary);
-            min-height: 100vh;
-        }
+      /* Input styles (Motif-like) */
+      --input-bg: #fff;
+      --input-radius: 10px;
+      --input-border: #dcdcdc;
+      --input-focus: #ffe600;
+      --input-error: #c62828;
+      --hint-color: #6B7280;
 
-        /* ================= HEADER ================= */
+      /* Dropdown styles */
+      --dropdown-shadow: 0 10px 25px rgba(0,0,0,0.12);
+      --dropdown-item-hover: rgba(0,0,0,0.06);
 
-        .app-header {
-            background: #000;
-            color: #fff;
-            padding: 16px 32px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
+      /* Button styles (Motif-like) */
+      --btn-bg: #ffe600;
+      --btn-bg-hover: #e6cf00;
+      --btn-text: #000000;
+      --btn-radius: 10px;
+      --btn-shadow: 0 8px 18px rgba(0,0,0,0.10);
+      --btn-shadow-hover: 0 10px 24px rgba(0,0,0,0.14);
 
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
+      /* File uploader styles */
+      --uploader-bg: #ffffff;
+      --uploader-border: #dcdcdc;
+      --uploader-border-hover: #000000;
+      --uploader-soft: rgba(0,0,0,0.05);
+      --uploader-success: #067d68;
+      --uploader-danger: #c62828;
+    }
 
-        .brand img { height: 44px; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        .brand h1 {
-            font-size: 18px;
-            font-weight: 600;
-        }
+    body {
+      font-family: EY InterState, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg-page);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
 
-        .header-actions a { text-decoration: none; }
+    /* ================= HEADER ================= */
 
-        .header-actions button {
-            background: var(--accent);
-            color: #000;
-            border: none;
-            padding: 10px 18px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            text-transform: uppercase;
-        }
+    .app-header {
+      background: #000;
+      color: #fff;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
 
-        .header-actions button:hover { background: var(--accent-dark); }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
 
-        /* ================= LAYOUT ================= */
+    .brand img { height: 44px; }
 
-        .page {
-            max-width: 1100px;
-            margin: 40px auto;
-            padding: 0 20px;
-        }
+    .brand h1 {
+      font-size: 18px;
+      font-weight: 600;
+    }
 
-        .card {
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 28px;
-            margin-bottom: 30px;
-        }
+    .header-actions a { text-decoration: none; }
 
-        /* ================= FORM ================= */
+    .header-actions button {
+      background: var(--accent);
+      color: #000;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
 
-        .form-group { margin-bottom: 22px; }
+    .header-actions button:hover { background: var(--accent-dark); }
 
-        label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-secondary);
-            margin-bottom: 6px;
-            text-transform: uppercase;
-        }
+    /* ================= LAYOUT ================= */
 
-        input[type="text"], select, input[type="file"] {
-            width: 100%;
-            padding: 12px 14px;
-            font-size: 14px;
-            border-radius: 6px;
-            border: 1px solid var(--border-color);
-        }
+    .page {
+      max-width: 1100px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
 
-        input:focus, select:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 28px;
+      margin-bottom: 30px;
+    }
 
-        input[type="file"]::file-selector-button {
-            background: #000;
-            color: #fff;
-            border: none;
-            padding: 8px 14px;
-            margin-right: 12px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
+    /* ================= FORM ================= */
 
-        .primary-btn {
-            margin-top: 10px;
-            width: 100%;
-            padding: 14px;
-            background: var(--accent);
-            color: #000;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 700;
-            cursor: pointer;
-            text-transform: uppercase;
-        }
+    .form-group { margin-bottom: 22px; }
 
-        .primary-btn:hover { background: var(--accent-dark); }
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
 
-        .primary-btn:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
+    input[type="text"], select, input[type="file"] {
+      width: 100%;
+      padding: 12px 14px;
+      font-size: 14px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
 
-        /* ================= INLINE LOADER (NEW) ================= */
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
 
-        .inline-loader {
-            display: none;
-            margin-top: 14px;
-            align-items: center;
-            gap: 10px;
-            justify-content: center;
-            padding: 12px;
-            border-radius: 8px;
-            background: #fff; /* stays inside the card */
-            border: 1px solid var(--border-color);
-        }
+    /* ================= INLINE LOADER ================= */
 
-        .inline-loader.active { display: flex; }
+    .inline-loader {
+      display: none;
+      margin-top: 14px;
+      align-items: center;
+      gap: 10px;
+      justify-content: center;
+      padding: 12px;
+      border-radius: 8px;
+      background: #fff;
+      border: 1px solid var(--border-color);
+    }
 
-        .spinner {
-            width: 18px;
-            height: 18px;
-            border: 3px solid #e6e6e6;
-            border-top-color: #000; /* black circle */
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
+    .inline-loader.active { display: flex; }
 
-        .loader-text {
-            font-size: 12px;
-            font-weight: 700;
-            color: #000;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 3px solid #e6e6e6;
+      border-top-color: #000;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
 
-        @keyframes spin { to { transform: rotate(360deg); } }
+    .loader-text {
+      font-size: 12px;
+      font-weight: 700;
+      color: #000;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
 
-        /* ================= RESULT ================= */
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-        .result-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
+    /* ================= RESULT ================= */
 
-        .result-header h3 {
-            font-size: 14px;
-            font-weight: 700;
-            text-transform: uppercase;
-            color: var(--text-secondary);
-        }
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
 
-        .agent-badge {
-            font-size: 12px;
-            background: #000;
-            color: #fff;
-            padding: 6px 10px;
-            border-radius: 6px;
-        }
+    .result-header h3 {
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
 
-        .file-meta {
-            font-size: 12px;
-            color: var(--text-secondary);
-            margin-bottom: 10px;
-        }
+    .agent-badge {
+      font-size: 12px;
+      background: #000;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px;
+    }
 
-        pre {
-            background: #f9f9f9;
-            border: 1px solid var(--border-color);
-            padding: 20px;
-            border-radius: 8px;
-            font-size: 13px;
-            line-height: 1.7;
-            white-space: pre-wrap;
-            overflow-x: auto;
-        }
+    .file-meta {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 10px;
+    }
 
-        .error {
-            color: #c62828;
-            font-size: 14px;
-            margin-top: 16px;
-        }
+    pre {
+      background: #f9f9f9;
+      border: 1px solid var(--border-color);
+      padding: 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      overflow-x: auto;
+    }
 
-        /* Hide result container until we have data */
-        #resultCard { display: none; }
-        #errorCard  { display: none; }
-    </style>
+    .error {
+      color: #c62828;
+      font-size: 14px;
+      margin-top: 16px;
+    }
+
+    /* Hide result container until we have data */
+    #resultCard { display: none; }
+    #errorCard  { display: none; }
+
+    /* ===========================================================
+       ✅ Motif <motif-input> replacement
+    =========================================================== */
+
+    .motif-field { width: 100%; }
+
+    .motif-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--input-border);
+      border-radius: var(--input-radius);
+      background: var(--input-bg);
+      transition: border-color 120ms ease, box-shadow 120ms ease;
+      width: 100%;
+      height: 40px;
+    }
+
+    .motif-input-wrap:focus-within {
+      border-color: var(--input-focus);
+      box-shadow: 0 0 0 4px rgba(255, 230, 0, 0.25);
+    }
+
+    .motif-prefix-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #111;
+      flex: 0 0 auto;
+    }
+
+    .motif-text-input {
+      width: 100%;
+      border: none !important;
+      outline: none !important;
+      padding: 6px 2px;
+      font-size: 14px;
+      background: transparent;
+    }
+
+    .motif-text-input::placeholder { color: #9CA3AF; }
+
+    .motif-clear {
+      border: none;
+      background: transparent;
+      color: #6B7280;
+      font-size: 18px;
+      line-height: 1;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 6px;
+      flex: 0 0 auto;
+    }
+
+    .motif-clear:hover {
+      color: #111;
+      background: rgba(0,0,0,0.06);
+    }
+
+    .motif-hint {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--hint-color);
+    }
+
+    .motif-error {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--input-error);
+      display: none;
+    }
+
+    .motif-field.has-error .motif-input-wrap {
+      border-color: var(--input-error);
+      box-shadow: 0 0 0 4px rgba(198, 40, 40, 0.14);
+    }
+    .motif-field.has-error .motif-error { display: block; }
+
+    /* ===========================================================
+       ✅ Motif <motif-dropdown> replacement
+    =========================================================== */
+
+    .motif-dd { position: relative; width: 100%; }
+
+    .motif-dd-trigger {
+      width: 100%;
+      height: 40px;
+      padding: 10px 12px;
+      border: 1px solid var(--input-border);
+      border-radius: var(--input-radius);
+      background: var(--input-bg);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--text-primary);
+      transition: border-color 120ms ease, box-shadow 120ms ease;
+    }
+
+    .motif-dd-trigger:focus {
+      outline: none;
+      border-color: var(--input-focus);
+      box-shadow: 0 0 0 4px rgba(255, 230, 0, 0.25);
+    }
+
+    .motif-dd-trigger .placeholder { color: #9CA3AF; }
+
+    .motif-dd-chevron {
+      display: inline-flex;
+      flex: 0 0 auto;
+      color: #111;
+      transition: transform 150ms ease;
+    }
+
+    .motif-dd.open .motif-dd-chevron { transform: rotate(180deg); }
+
+    .motif-dd-content {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      width: 100%;
+      background: #fff;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: var(--dropdown-shadow);
+      padding: 6px;
+      z-index: 50;
+      display: none;
+      max-height: 260px;
+      overflow: auto;
+    }
+
+    .motif-dd.open .motif-dd-content { display: block; }
+
+    .motif-dd-item {
+      width: 100%;
+      text-align: left;
+      border: none;
+      background: transparent;
+      padding: 10px 10px;
+      border-radius: 10px;
+      font-size: 14px;
+      cursor: pointer;
+      color: var(--text-primary);
+    }
+
+    .motif-dd-item:hover,
+    .motif-dd-item:focus {
+      outline: none;
+      background: var(--dropdown-item-hover);
+    }
+
+    .motif-dd-item[aria-selected="true"] {
+      background: rgba(255, 230, 0, 0.30);
+      font-weight: 700;
+    }
+
+    .motif-dd-separator {
+      height: 1px;
+      background: var(--border-color);
+      margin: 6px 2px;
+      border-radius: 1px;
+    }
+
+    /* ===========================================================
+       ✅ Motif <motif-button> replacement
+    =========================================================== */
+
+    .motif-button {
+      margin-top: 10px;
+      width: 100%;
+      height: 44px;
+      border: none;
+      border-radius: var(--btn-radius);
+      background: var(--btn-bg);
+      color: var(--btn-text);
+      font-size: 14px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      box-shadow: var(--btn-shadow);
+      transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+
+    .motif-button:hover {
+      background: var(--btn-bg-hover);
+      box-shadow: var(--btn-shadow-hover);
+      transform: translateY(-1px);
+    }
+
+    .motif-button:active {
+      transform: translateY(0px);
+      box-shadow: var(--btn-shadow);
+    }
+
+    .motif-button:focus {
+      outline: none;
+      box-shadow: 0 0 0 4px rgba(255, 230, 0, 0.35), var(--btn-shadow);
+    }
+
+    .motif-button:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    /* ===========================================================
+       ✅ Motif <motif-file-uploader> replacement (HTML + CSS)
+    =========================================================== */
+
+    .uploader {
+      width: 100%;
+    }
+
+    .uploader-dropzone {
+      border: 2px dashed var(--uploader-border);
+      border-radius: 12px;
+      background: var(--uploader-bg);
+      padding: 18px;
+      cursor: pointer;
+      transition: border-color 140ms ease, background 140ms ease, box-shadow 140ms ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .uploader-dropzone:hover {
+      border-color: var(--uploader-border-hover);
+      background: rgba(0,0,0,0.02);
+    }
+
+    .uploader-dropzone.dragover {
+      border-color: #000;
+      box-shadow: 0 0 0 4px rgba(255, 230, 0, 0.25);
+      background: rgba(255, 230, 0, 0.08);
+    }
+
+    .uploader-left {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .uploader-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: rgba(0,0,0,0.06);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+      color: #111;
+    }
+
+    .uploader-text {
+      min-width: 0;
+    }
+
+    .uploader-title {
+      font-size: 14px;
+      font-weight: 800;
+      color: #111;
+      line-height: 1.2;
+    }
+
+    .uploader-title b {
+      font-weight: 900;
+    }
+
+    .uploader-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 4px;
+    }
+
+    .uploader-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 0 0 auto;
+    }
+
+    .uploader-pill {
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(0,0,0,0.06);
+      color: #111;
+      white-space: nowrap;
+    }
+
+    .uploader-clear {
+      border: none;
+      background: transparent;
+      color: #111;
+      font-weight: 900;
+      cursor: pointer;
+      padding: 6px 8px;
+      border-radius: 8px;
+    }
+
+    .uploader-clear:hover {
+      background: rgba(0,0,0,0.06);
+    }
+
+    .uploader-messages {
+      margin-top: 8px;
+      font-size: 12px;
+      display: none;
+    }
+
+    .uploader-messages.show {
+      display: block;
+    }
+
+    .uploader-messages.error {
+      color: var(--uploader-danger);
+    }
+
+    .uploader-messages.success {
+      color: var(--uploader-success);
+    }
+
+    .file-list {
+      margin-top: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .file-item {
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 12px;
+      background: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .file-meta-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .file-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: rgba(0,0,0,0.06);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #111;
+      flex: 0 0 auto;
+    }
+
+    .file-info {
+      min-width: 0;
+    }
+
+    .file-name {
+      font-size: 13px;
+      font-weight: 800;
+      color: #111;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 560px;
+    }
+
+    .file-sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .file-status {
+      font-size: 11px;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 0.2px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(6,125,104,0.12);
+      color: var(--uploader-success);
+      white-space: nowrap;
+    }
+
+    .file-remove {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-weight: 900;
+      color: #111;
+    }
+
+    .file-remove:hover {
+      background: rgba(0,0,0,0.06);
+    }
+
+    /* Hide the real file input */
+    .uploader input[type="file"] {
+      display: none;
+    }
+  </style>
 </head>
 
 <body>
 
 <header class="app-header">
-    <div class="brand">
-        <img src="/static/EY_Logo 2.png" alt="EY Logo">
-        <h1>AI Knowledge Engine</h1>
-    </div>
+  <div class="brand">
+    <img src="/static/EY_Logo 2.png" alt="EY Logo">
+    <h1>AI Knowledge Engine</h1>
+  </div>
 
-    <div class="header-actions">
-        <a href="{{ url_for('agents_list') }}">
-            <button type="button">Agents</button>
-        </a>
-    </div>
+  <div class="header-actions">
+    <a href="{{ url_for('agents_list') }}">
+      <button type="button">Agents</button>
+    </a>
+  </div>
 </header>
 
 <div class="page">
 
-    <div class="card">
-        <form method="POST" enctype="multipart/form-data" id="analyzeForm">
+  <div class="card">
+    <form method="POST" enctype="multipart/form-data" id="analyzeForm">
 
-            <div class="form-group">
-                <label>Task</label>
-                <input
-                    type="text"
-                    name="topic"
-                    placeholder="E.g. Extract invoice details and summarize"
-                    value="{{ topic }}"
-                    required
-                >
+      <!-- ================= TASK ================= -->
+      <div class="form-group motif-field" id="taskField">
+        <label for="topicInput">Task</label>
+
+        <div class="motif-input-wrap">
+          <span class="motif-prefix-icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                 xmlns="http://www.w3.org/2000/svg">
+              <path fill-rule="evenodd" clip-rule="evenodd"
+                    d="M6.38558 8.5699C6.62311 8.23057 7.09076 8.14804 7.4301 8.38557L12 11.5845L16.5699 8.38557C16.9092 8.14804 17.3769 8.23056 17.6144 8.5699C17.852 8.90924 17.7694 9.37689 17.4301 9.61442L12.4301 13.1144C12.1719 13.2952 11.8281 13.2952 11.5699 13.1144L6.5699 9.61442C6.23057 9.37689 6.14804 8.90924 6.38558 8.5699Z"
+                    fill="currentColor" />
+              <path fill-rule="evenodd" clip-rule="evenodd"
+                    d="M4 5.75C3.30964 5.75 2.75 6.30964 2.75 7V17C2.75 17.6904 3.30964 18.25 4 18.25H20C20.6904 18.25 21.25 17.6904 21.25 17V7C21.25 6.30964 20.6904 5.75 20 5.75H4ZM1.25 7C1.25 5.48122 2.48122 4.25 4 4.25H20C21.5188 4.25 22.75 5.48122 22.75 7V17C22.75 18.5188 21.5188 19.75 20 19.75H4C2.48122 19.75 1.25 18.5188 1.25 17V7Z"
+                    fill="currentColor" />
+            </svg>
+          </span>
+
+          <input
+            type="text"
+            id="topicInput"
+            class="motif-text-input"
+            placeholder="E.g. Extract invoice details and summarize"
+            maxlength="200"
+            minlength="0"
+            value="{{ topic }}"
+            aria-describedby="topicHint topicError"
+          />
+
+          <button type="button" class="motif-clear" aria-label="Clear" id="clearTopicBtn">
+            ×
+          </button>
+        </div>
+
+        <p class="motif-hint" id="topicHint">This is a hint text to help users</p>
+        <p class="motif-error" id="topicError">This is an error message</p>
+
+        <input type="hidden" name="topic" id="topicHidden" value="{{ topic }}" required />
+      </div>
+
+      <!-- ================= DOCUMENT TYPE ================= -->
+      <div class="form-group" id="docTypeField">
+        <label for="docTypeTrigger">Document Type</label>
+
+        <div class="motif-dd" id="docTypeDropdown">
+          <button
+            type="button"
+            class="motif-dd-trigger"
+            id="docTypeTrigger"
+            aria-haspopup="listbox"
+            aria-expanded="false"
+          >
+            <span id="docTypeText" class="placeholder">Select document type</span>
+            <span class="motif-dd-chevron" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                   xmlns="http://www.w3.org/2000/svg">
+                <path d="M6.38558 8.5699C6.62311 8.23057 7.09076 8.14804 7.4301 8.38557L12 11.5845L16.5699 8.38557C16.9092 8.14804 17.3769 8.23056 17.6144 8.5699C17.852 8.90924 17.7694 9.37689 17.4301 9.61442L12.4301 13.1144C12.1719 13.2952 11.8281 13.2952 11.5699 13.1144L6.5699 9.61442C6.23057 9.37689 6.14804 8.90924 6.38558 8.5699Z"
+                      fill="currentColor"/>
+              </svg>
+            </span>
+          </button>
+
+          <div class="motif-dd-content" role="listbox" aria-labelledby="docTypeTrigger">
+            <button type="button" class="motif-dd-item" role="option" data-value="" aria-selected="true">
+              Select document type
+            </button>
+
+            <div class="motif-dd-separator" role="separator"></div>
+
+            <button type="button" class="motif-dd-item" role="option" data-value="invoice">Invoice</button>
+            <button type="button" class="motif-dd-item" role="option" data-value="receipt">Receipt</button>
+            <button type="button" class="motif-dd-item" role="option" data-value="identity">Identity Document</button>
+            <button type="button" class="motif-dd-item" role="option" data-value="summary">Summarize Document</button>
+          </div>
+        </div>
+
+        <input type="hidden" name="doc_type" id="docTypeHidden" value="" />
+      </div>
+
+      <!-- ================= UPLOAD DOCUMENT (Motif file uploader -> HTML/CSS) ================= -->
+      <div class="form-group uploader" id="uploaderField">
+        <label>Upload Document</label>
+
+        <!-- Hidden real input submitted to Flask -->
+        <input
+          type="file"
+          id="fileInput"
+          name="file"
+          multiple
+          aria-hidden="true"
+        />
+
+        <!-- Dropzone -->
+        <div class="uploader-dropzone" id="dropzone" role="button" tabindex="0" aria-label="Upload files">
+          <div class="uploader-left">
+            <div class="uploader-icon" aria-hidden="true">
+              <!-- upload icon -->
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                   xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 3L12 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M7 8L12 3L17 8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M4 15V19C4 20.1046 4.89543 21 6 21H18C19.1046 21 20 20.1046 20 19V15"
+                      stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
             </div>
-
-            <div class="form-group">
-                <label>Document Type</label>
-                <select name="doc_type">
-                    <option value="">Select document type</option>
-                    <option value="invoice">Invoice</option>
-                    <option value="receipt">Receipt</option>
-                    <option value="identity">Identity Document</option>
-                    <option value="summary">Summarize Document</option>
-
-                </select>
+            <div class="uploader-text">
+              <div class="uploader-title"><b>Click to upload</b> or drag and drop</div>
+              <div class="uploader-desc">PDF, DOCX, PNG, JPG (max files: <span id="maxFilesText">5</span>)</div>
             </div>
+          </div>
 
-            <div class="form-group">
-                <label>Upload Document</label>
-                <input type="file" name="file">
-            </div>
+          <div class="uploader-actions">
+            <span class="uploader-pill" id="fileCountPill">0 files</span>
+            <button type="button" class="uploader-clear" id="clearAllBtn" title="Clear all">Clear</button>
+          </div>
+        </div>
 
-            <button type="submit" class="primary-btn" id="analyzeBtn">Analyze</button>
+        <!-- Messages (errors like duplicates / max files) -->
+        <div class="uploader-messages" id="uploaderMsg"></div>
 
-            <!-- Inline loader directly under Analyze button -->
-            <div id="inlineLoader" class="inline-loader">
-                <div class="spinner"></div>
-                <div class="loader-text">Processing...</div>
-            </div>
-        </form>
+        <!-- File list -->
+        <div class="file-list" id="fileList"></div>
+      </div>
+
+      <!-- ✅ Motif button replacement -->
+      <button type="submit" class="motif-button" id="analyzeBtn">Analyze</button>
+
+      <!-- Inline loader -->
+      <div id="inlineLoader" class="inline-loader">
+        <div class="spinner"></div>
+        <div class="loader-text">Processing...</div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Result card -->
+  <div class="card" id="resultCard">
+    <div class="result-header">
+      <h3>Analysis Result</h3>
+      <span class="agent-badge" id="agentBadge"></span>
     </div>
 
-    <!-- Result card (filled by JS) -->
-    <div class="card" id="resultCard">
+    <div class="file-meta" id="fileMeta" style="display:none;">
+      Uploaded file: <strong id="fileName"></strong>
+    </div>
+
+    <pre id="resultOutput"></pre>
+  </div>
+
+  <!-- Error card -->
+  <div class="card" id="errorCard">
+    <div class="error" id="errorMsg"></div>
+  </div>
+
+  <!-- Optional server-rendered result -->
+  {% if result %}
+    {% if result.status == "success" %}
+      <div class="card">
         <div class="result-header">
-            <h3>Analysis Result</h3>
-            <span class="agent-badge" id="agentBadge"></span>
+          <h3>Analysis Result</h3>
+          <span class="agent-badge">{{ result.agent }}</span>
         </div>
 
-        <div class="file-meta" id="fileMeta" style="display:none;">
-            Uploaded file: <strong id="fileName"></strong>
-        </div>
-
-        <pre id="resultOutput"></pre>
-    </div>
-
-    <!-- Error card (filled by JS) -->
-    <div class="card" id="errorCard">
-        <div class="error" id="errorMsg"></div>
-    </div>
-
-    <!-- Optional: still supports server-rendered result if you reload without JS -->
-    {% if result %}
-        {% if result.status == "success" %}
-            <div class="card">
-                <div class="result-header">
-                    <h3>Analysis Result</h3>
-                    <span class="agent-badge">{{ result.agent }}</span>
-                </div>
-
-                {% if result.filename %}
-                    <div class="file-meta">
-                        Uploaded file: <strong>{{ result.filename }}</strong>
-                    </div>
-                {% endif %}
-
-                <pre>{{ result.output | safe }}</pre>
-            </div>
+        {% if result.filename %}
+          <div class="file-meta">
+            Uploaded file: <strong>{{ result.filename }}</strong>
+          </div>
         {% endif %}
 
-        {% if result.status == "error" %}
-            <div class="card">
-                <div class="error">{{ result.message }}</div>
-            </div>
-        {% endif %}
+        <pre>{{ result.output | safe }}</pre>
+      </div>
     {% endif %}
 
+    {% if result.status == "error" %}
+      <div class="card">
+        <div class="error">{{ result.message }}</div>
+      </div>
+    {% endif %}
+  {% endif %}
 </div>
 
 <script>
 (function () {
-    const form = document.getElementById("analyzeForm");
-    const btn = document.getElementById("analyzeBtn");
-    const loader = document.getElementById("inlineLoader");
+  const form = document.getElementById("analyzeForm");
+  const btn = document.getElementById("analyzeBtn");
+  const loader = document.getElementById("inlineLoader");
 
-    const resultCard = document.getElementById("resultCard");
-    const agentBadge = document.getElementById("agentBadge");
-    const fileMeta = document.getElementById("fileMeta");
-    const fileName = document.getElementById("fileName");
-    const resultOutput = document.getElementById("resultOutput");
+  const resultCard = document.getElementById("resultCard");
+  const agentBadge = document.getElementById("agentBadge");
+  const fileMeta = document.getElementById("fileMeta");
+  const fileName = document.getElementById("fileName");
+  const resultOutput = document.getElementById("resultOutput");
 
-    const errorCard = document.getElementById("errorCard");
-    const errorMsg = document.getElementById("errorMsg");
+  const errorCard = document.getElementById("errorCard");
+  const errorMsg = document.getElementById("errorMsg");
 
-    if (!form) return;
+  const topicInput = document.getElementById("topicInput");
+  const topicHidden = document.getElementById("topicHidden");
+  const clearBtn = document.getElementById("clearTopicBtn");
+  const taskField = document.getElementById("taskField");
 
-    function showLoader() {
-        loader.classList.add("active");
-        btn.disabled = true;
+  // Dropdown refs
+  const dd = document.getElementById("docTypeDropdown");
+  const ddTrigger = document.getElementById("docTypeTrigger");
+  const ddText = document.getElementById("docTypeText");
+  const ddHidden = document.getElementById("docTypeHidden");
+  const ddItems = dd ? Array.from(dd.querySelectorAll(".motif-dd-item")) : [];
+
+  // File uploader refs
+  const fileInput = document.getElementById("fileInput");
+  const dropzone = document.getElementById("dropzone");
+  const fileList = document.getElementById("fileList");
+  const clearAllBtn = document.getElementById("clearAllBtn");
+  const fileCountPill = document.getElementById("fileCountPill");
+  const uploaderMsg = document.getElementById("uploaderMsg");
+  const maxFilesText = document.getElementById("maxFilesText");
+
+  // Motif-like defaults
+  const MAX_FILES = 5; // change this if you want
+  const ACCEPT_EXT = ["pdf","doc","docx","png","jpg","jpeg"]; // accepted types
+
+  if (maxFilesText) maxFilesText.textContent = String(MAX_FILES);
+
+  // Persistent queue like Motif controlled mode
+  let persistentFileQueue = [];
+
+  if (!form) return;
+
+  /* ===================== Loader + Result helpers ===================== */
+
+  function showLoader() {
+    loader.classList.add("active");
+    btn.disabled = true;
+  }
+
+  function hideLoader() {
+    loader.classList.remove("active");
+    btn.disabled = false;
+  }
+
+  function showError(message) {
+    errorMsg.textContent = message || "Something went wrong.";
+    errorCard.style.display = "block";
+    resultCard.style.display = "none";
+  }
+
+  function showResult(data) {
+    errorCard.style.display = "none";
+    resultCard.style.display = "block";
+
+    agentBadge.textContent = data.agent || "Agent";
+
+    if (data.filename) {
+      fileName.textContent = data.filename;
+      fileMeta.style.display = "block";
+    } else {
+      fileMeta.style.display = "none";
     }
 
-    function hideLoader() {
-        loader.classList.remove("active");
-        btn.disabled = false;
+    const out = data.output ?? data;
+    try {
+      resultOutput.textContent = (typeof out === "string") ? out : JSON.stringify(out, null, 2);
+    } catch (e) {
+      resultOutput.textContent = String(out);
     }
+  }
 
-    function showError(message) {
-        errorMsg.textContent = message || "Something went wrong.";
-        errorCard.style.display = "block";
-        resultCard.style.display = "none";
-    }
+  /* ===================== Task input sync ===================== */
 
-    function showResult(data) {
-        errorCard.style.display = "none";
-        resultCard.style.display = "block";
+  function syncTopic() {
+    topicHidden.value = (topicInput?.value ?? "").trim();
+  }
 
-        agentBadge.textContent = data.agent || "Agent";
-
-        if (data.filename) {
-            fileName.textContent = data.filename;
-            fileMeta.style.display = "block";
-        } else {
-            fileMeta.style.display = "none";
-        }
-
-        // Pretty print output
-        const out = data.output ?? data;
-        try {
-            resultOutput.textContent = (typeof out === "string")
-                ? out
-                : JSON.stringify(out, null, 2);
-        } catch (e) {
-            resultOutput.textContent = String(out);
-        }
-    }
-
-    form.addEventListener("submit", async function (e) {
-        e.preventDefault(); // ✅ prevent page reload
-
-        // Hide previous output
-        errorCard.style.display = "none";
-        resultCard.style.display = "none";
-
-        // Show loader inline
-        showLoader();
-
-        try {
-            const formData = new FormData(form);
-
-            const res = await fetch("/", {
-                method: "POST",
-                body: formData,
-                headers: {
-                    "X-Requested-With": "XMLHttpRequest"
-                }
-            });
-
-            const data = await res.json();
-
-            if (!res.ok || data.status === "error") {
-                showError(data.message || "Error while processing.");
-            } else if (data.status === "no_suitable_agent") {
-                showError("No suitable agent found for this task.");
-            } else {
-                showResult(data);
-            }
-        } catch (err) {
-            showError("Network error. Please try again.");
-        } finally {
-            hideLoader();
-        }
+  if (clearBtn && topicInput) {
+    clearBtn.addEventListener("click", () => {
+      topicInput.value = "";
+      syncTopic();
+      topicInput.focus();
+      taskField?.classList.remove("has-error");
     });
+  }
+
+  if (topicInput) {
+    topicInput.addEventListener("input", () => {
+      syncTopic();
+      if (topicInput.value.trim()) taskField?.classList.remove("has-error");
+    });
+    topicInput.addEventListener("change", syncTopic);
+    topicInput.addEventListener("blur", syncTopic);
+  }
+  syncTopic();
+
+  /* ===================== Dropdown logic ===================== */
+
+  function openDropdown() {
+    if (!dd) return;
+    dd.classList.add("open");
+    ddTrigger?.setAttribute("aria-expanded", "true");
+  }
+
+  function closeDropdown() {
+    if (!dd) return;
+    dd.classList.remove("open");
+    ddTrigger?.setAttribute("aria-expanded", "false");
+  }
+
+  function toggleDropdown() {
+    if (!dd) return;
+    dd.classList.contains("open") ? closeDropdown() : openDropdown();
+  }
+
+  function setSelected(value, label) {
+    ddHidden.value = value;
+
+    if (!value) {
+      ddText.textContent = "Select document type";
+      ddText.classList.add("placeholder");
+    } else {
+      ddText.textContent = label;
+      ddText.classList.remove("placeholder");
+    }
+
+    ddItems.forEach(b => {
+      const isSel = (b.dataset.value ?? "") === value;
+      b.setAttribute("aria-selected", String(isSel));
+    });
+  }
+
+  setSelected("", "Select document type");
+
+  if (ddTrigger) {
+    ddTrigger.addEventListener("click", (e) => {
+      e.preventDefault();
+      toggleDropdown();
+    });
+  }
+
+  ddItems.forEach(item => {
+    item.addEventListener("click", () => {
+      const value = item.dataset.value ?? "";
+      const label = item.textContent.trim();
+      setSelected(value, label);
+      closeDropdown();
+      ddTrigger?.focus();
+    });
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!dd) return;
+    if (!dd.contains(e.target)) closeDropdown();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeDropdown();
+  });
+
+  /* ===================== File Uploader (Motif-like) ===================== */
+
+  function bytesToSize(bytes) {
+    if (!bytes && bytes !== 0) return "";
+    const sizes = ["B","KB","MB","GB"];
+    if (bytes === 0) return "0 B";
+    const i = Math.floor(Math.log(bytes) / Math.log(1024));
+    return (bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1) + " " + sizes[i];
+  }
+
+  function showUploaderMessage(text, type = "error") {
+    if (!uploaderMsg) return;
+    uploaderMsg.textContent = text;
+    uploaderMsg.classList.remove("error", "success", "show");
+    uploaderMsg.classList.add(type, "show");
+    // auto-hide after a bit
+    window.clearTimeout(showUploaderMessage._t);
+    showUploaderMessage._t = window.setTimeout(() => {
+      uploaderMsg.classList.remove("show");
+    }, 3000);
+  }
+  showUploaderMessage._t = null;
+
+  function isDuplicate(file) {
+    return persistentFileQueue.some(f =>
+      f.name === file.name &&
+      f.size === file.size &&
+      f.lastModified === file.lastModified
+    );
+  }
+
+  function isAccepted(file) {
+    const ext = (file.name.split(".").pop() || "").toLowerCase();
+    return ACCEPT_EXT.includes(ext);
+  }
+
+  function setInputFilesFromQueue() {
+    if (!fileInput) return;
+    const dt = new DataTransfer();
+    persistentFileQueue.forEach(f => dt.items.add(f));
+    fileInput.files = dt.files;
+  }
+
+  function renderFileItems() {
+    if (!fileList) return;
+    fileList.innerHTML = "";
+
+    // pill count
+    if (fileCountPill) {
+      fileCountPill.textContent = `${persistentFileQueue.length} file${persistentFileQueue.length === 1 ? "" : "s"}`;
+    }
+
+    persistentFileQueue.forEach(file => {
+      const item = document.createElement("div");
+      item.className = "file-item";
+
+      item.innerHTML = `
+        <div class="file-meta-left">
+          <div class="file-badge" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 xmlns="http://www.w3.org/2000/svg">
+              <path d="M14 2H7C5.89543 2 5 2.89543 5 4V20C5 21.1046 5.89543 22 7 22H17C18.1046 22 19 21.1046 19 20V7L14 2Z"
+                    stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M14 2V7H19" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+          </div>
+
+          <div class="file-info">
+            <div class="file-name" title="${file.name}">${file.name}</div>
+            <div class="file-sub">
+              <span>${bytesToSize(file.size)}</span>
+              <span class="file-status">Completed</span>
+            </div>
+          </div>
+        </div>
+
+        <button type="button" class="file-remove" aria-label="Remove ${file.name}">Remove</button>
+      `;
+
+      item.querySelector(".file-remove").addEventListener("click", () => {
+        persistentFileQueue = persistentFileQueue.filter(f =>
+          !(f.name === file.name && f.size === file.size && f.lastModified === file.lastModified)
+        );
+        setInputFilesFromQueue();
+        renderFileItems();
+      });
+
+      fileList.appendChild(item);
+    });
+  }
+
+  function addFiles(newFiles) {
+    const rejected = [];
+
+    for (const file of newFiles) {
+      if (!isAccepted(file)) {
+        rejected.push({ file, reason: "type" });
+        continue;
+      }
+      if (isDuplicate(file)) {
+        rejected.push({ file, reason: "duplicate" });
+        continue;
+      }
+      if (persistentFileQueue.length >= MAX_FILES) {
+        rejected.push({ file, reason: "max" });
+        continue;
+      }
+      persistentFileQueue.push(file);
+    }
+
+    // Surface common errors like Motif
+    const dup = rejected.find(r => r.reason === "duplicate");
+    const max = rejected.find(r => r.reason === "max");
+    const type = rejected.find(r => r.reason === "type");
+
+    if (max) showUploaderMessage(`Max files exceeded. You can upload up to ${MAX_FILES} files.`, "error");
+    else if (dup) showUploaderMessage(`Duplicate file detected. "${dup.file.name}" already added.`, "error");
+    else if (type) showUploaderMessage(`Unsupported file type. Allowed: ${ACCEPT_EXT.join(", ").toUpperCase()}`, "error");
+
+    setInputFilesFromQueue();
+    renderFileItems();
+  }
+
+  // Click-to-upload (dropzone opens file picker)
+  if (dropzone && fileInput) {
+    dropzone.addEventListener("click", () => fileInput.click());
+    dropzone.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        fileInput.click();
+      }
+    });
+
+    fileInput.addEventListener("change", () => {
+      const files = Array.from(fileInput.files || []);
+      addFiles(files);
+      // reset the input so same file can be chosen again later
+      fileInput.value = "";
+    });
+
+    // Drag & drop handling
+    dropzone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropzone.classList.add("dragover");
+    });
+    dropzone.addEventListener("dragleave", () => {
+      dropzone.classList.remove("dragover");
+    });
+    dropzone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropzone.classList.remove("dragover");
+      const dt = e.dataTransfer;
+      if (!dt) return;
+      const files = Array.from(dt.files || []);
+      addFiles(files);
+    });
+  }
+
+  // Clear all
+  if (clearAllBtn) {
+    clearAllBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      persistentFileQueue = [];
+      setInputFilesFromQueue();
+      renderFileItems();
+      showUploaderMessage("Cleared all files.", "success");
+    });
+  }
+
+  // initial render
+  renderFileItems();
+
+  /* ===================== Form submit ===================== */
+
+  form.addEventListener("submit", async function (e) {
+    e.preventDefault();
+
+    syncTopic();
+
+    // Validate Task
+    if (!topicHidden.value) {
+      taskField?.classList.add("has-error");
+      showError("Please enter a task.");
+      return;
+    } else {
+      taskField?.classList.remove("has-error");
+    }
+
+    errorCard.style.display = "none";
+    resultCard.style.display = "none";
+
+    showLoader();
+
+    try {
+      // Ensure fileInput has the queue
+      setInputFilesFromQueue();
+
+      const formData = new FormData(form);
+
+      const res = await fetch("/", {
+        method: "POST",
+        body: formData,
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.status === "error") {
+        showError(data.message || "Error while processing.");
+      } else if (data.status === "no_suitable_agent") {
+        showError("No suitable agent found for this task.");
+      } else {
+        showResult(data);
+      }
+    } catch (err) {
+      showError("Network error. Please try again.");
+    } finally {
+      hideLoader();
+    }
+  });
 })();
 </script>
 
