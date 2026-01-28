@@ -1,4 +1,3 @@
-
 import os
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from azure.data.tables import TableServiceClient
@@ -12,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "super-secret-key")  # change in prod
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "super-secret-key")
 
 # --------------------------------------------------
 # AZURE TABLE STORAGE
@@ -37,9 +36,6 @@ except Exception:
 # --------------------------------------------------
 
 ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg", "tiff", "bmp", "docx"}
-ALLOWED_DOC_TYPES = {"invoice", "receipt", "identity", "summary"}
-
-
 
 def is_allowed_file(filename: str) -> bool:
     if "." not in filename:
@@ -49,9 +45,7 @@ def is_allowed_file(filename: str) -> bool:
 
 
 def is_ajax_request(req) -> bool:
-    # fetch() commonly sends this header; we add it from JS
     return req.headers.get("X-Requested-With") == "XMLHttpRequest"
-
 
 # --------------------------------------------------
 # MAIN ROUTE
@@ -65,19 +59,10 @@ def index():
     if request.method == "POST":
         try:
             topic = request.form.get("topic", "").strip()
-            doc_type = request.form.get("doc_type", "").strip()
             uploaded_file = request.files.get("file")
 
             if not topic:
                 msg = "Please enter a task."
-                if is_ajax_request(request):
-                    return jsonify({"status": "error", "message": msg}), 400
-                flash(msg)
-                return redirect(url_for("index"))
-
-            # Document type is OPTIONAL for LLM agents
-            if uploaded_file and uploaded_file.filename and doc_type and doc_type not in ALLOWED_DOC_TYPES:
-                msg = "Please select a valid document type."
                 if is_ajax_request(request):
                     return jsonify({"status": "error", "message": msg}), 400
                 flash(msg)
@@ -102,24 +87,19 @@ def index():
                 task=topic,
                 table_client=table_client,
                 file_bytes=file_bytes,
-                doc_type=doc_type if file_bytes else None,
                 filename=filename
             )
 
-            # Make sure result is dict-like
             if not isinstance(result, dict):
                 result = {"status": "success", "output": result}
 
-            # Attach filename for UI
             if filename:
                 result["filename"] = filename
 
-            # If AJAX, return JSON (no page reload)
             if is_ajax_request(request):
                 return jsonify(result)
 
         except Exception as e:
-            # Return proper error for AJAX or normal render for classic
             err = {"status": "error", "message": f"Internal error: {str(e)}"}
             if is_ajax_request(request):
                 return jsonify(err), 500
@@ -130,7 +110,6 @@ def index():
         topic=topic,
         result=result
     )
-
 
 # --------------------------------------------------
 # AGENTS LIST
@@ -177,7 +156,6 @@ def agents_list():
         allowed_models=allowed_models
     )
 
-
 # --------------------------------------------------
 # DB HELPER
 # --------------------------------------------------
@@ -207,6 +185,5 @@ def save_agent_to_db(
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
-
 
 

@@ -1,18 +1,15 @@
-import os, json
+import os, json, re
 from typing import Dict, Optional
 from utils import utility
 from copy import deepcopy
 from autogen.agentchat import AssistantAgent
 from azure.ai.formrecognizer import DocumentAnalysisClient
 from azure.core.credentials import AzureKeyCredential
-from azure.ai.documentintelligence.models import AnalyzeDocumentRequest
-
- 
 
 # --------------------------------------------------
 # MODEL REGISTRY (LLM)
 # --------------------------------------------------
- 
+
 AVAILABLE_MODELS = {
     "gpt-4.1-mini": {
         "model": "gpt-4.1-mini",
@@ -31,18 +28,10 @@ AVAILABLE_MODELS = {
     }
 }
 
-
-DOCUMENT_TYPES = {
-    "invoice": "prebuilt-invoice",
-    "receipt": "prebuilt-receipt",
-    "identity": "prebuilt-idDocument",
-}
- 
- 
 # --------------------------------------------------
 # LLM CONFIG BUILDER
 # --------------------------------------------------
- 
+
 def build_llm_config(model_key: str) -> dict:
     info = AVAILABLE_MODELS[model_key]
     return {
@@ -58,109 +47,76 @@ def build_llm_config(model_key: str) -> dict:
         "temperature": info["temperature"],
         "max_tokens": info["max_tokens"],
     }
- 
- 
+
 # --------------------------------------------------
 # LOAD AGENTS FROM AZURE TABLE
 # --------------------------------------------------
- 
+
 def load_agents_from_db(table_client) -> Dict[str, dict]:
     agents = {}
- 
+
     for ent in table_client.list_entities():
         if ent.get("PartitionKey") != "agents":
             continue
- 
+
         name = ent["RowKey"].strip()
         if not name.isidentifier():
             continue
- 
+
         agents[name] = {
             "name": name,
             "prompt": ent.get("prompt", ""),
             "model": ent.get("model", "gpt-4.1-mini"),
-            "agent_type": ent.get("agent_type", "llm"),  # llm | service
+            "agent_type": ent.get("agent_type", "llm"),
         }
- 
+
     return agents
- 
- 
+
 # --------------------------------------------------
-# BUILD AGENT CATALOG
+# FORM RECOGNIZER HANDLER (UNCHANGED)
 # --------------------------------------------------
- 
-def build_agent_catalog(
-    agents_meta: Dict[str, dict],
-    file_bytes: Optional[bytes]
-) -> str:
-    lines = []
- 
-    for name, meta in agents_meta.items():
-        if name == "Supervisor":
-            continue
- 
-        if meta["agent_type"] == "service" and not file_bytes:
-            continue
- 
-        role = meta["prompt"].replace("\n", " ").strip()
-        lines.append(f"- {name}: {role}")
- 
-    return "\n".join(lines)
- 
- 
-# --------------------------------------------------
-# FORM RECOGNIZER HANDLER (STABLE)
-# --------------------------------------------------
- 
-def run_form_recognizer(
-    file_bytes: bytes,
-    model_id: str
-) -> str:
+
+def run_form_recognizer(file_bytes: bytes, model_id: str):
     endpoint = os.environ.get("AZURE_DI_ENDPOINT")
     key = os.environ.get("AZURE_DI_KEY")
- 
-    if not endpoint or not key:
-        return "Document Intelligence credentials not configured."
- 
+
     client = DocumentAnalysisClient(
         endpoint=endpoint,
         credential=AzureKeyCredential(key)
     )
- 
+
     poller = client.begin_analyze_document(
         model_id=model_id,
         document=file_bytes
     )
- 
+
     result = poller.result()
-    raw_full = result.to_dict()
 
-    raw_slim = utility._strip_noise(deepcopy(raw_full))
-
-    flat_values = {}
-    if result.documents:
-        doc = result.documents[0]
-        if doc.fields:
-            for fname, f in doc.fields.items():
-                flat_values[fname] = utility._field_value_to_python(f)
-
-    # flat_text = "\n".join(f"{k}: {v}" for k, v in flat_values.items())
-    # print("Flat field values:", flat_values)
-    # print("Slimmed raw result:", raw_slim)
-    
     out = utility.fetch_results(result, model_id)
-    # print("Fetched results:", out)
-    return {
-        # "raw_full": raw_full,
-        "raw_slim": out,
-        "flat_values": raw_slim,
-    }
 
- 
+    return out
+
+# --------------------------------------------------
+# NEW: DOCUMENT INTENT DETECTOR
+# --------------------------------------------------
+
+def detect_document_type_from_prompt(prompt: str) -> str:
+    p = prompt.lower()
+
+    invoice_words = ["invoice", "vendor", "invoice number", "invoice id", "billing", "amount due", "tax"]
+    receipt_words = ["receipt", "merchant", "tip", "subtotal", "total tax"]
+
+    if any(w in p for w in invoice_words):
+        return "invoice"
+    if any(w in p for w in receipt_words):
+        return "receipt"
+
+    return "general"
+
 # --------------------------------------------------
 # MAIN PIPELINE
 # --------------------------------------------------
- 
+
 def run_pipeline(
     task: str,
     table_client,
@@ -170,130 +126,85 @@ def run_pipeline(
 ) -> dict:
 
     if not task or not task.strip():
-        return {
-            "status": "error",
-            "message": "Please provide a task."
-        }
-
-        # ---------------- SUMMARY DIRECT MODE ----------------
-    if doc_type == "summary" and file_bytes:
-        from utils.utility import extract_text_from_file
-
-        extracted_text = extract_text_from_file(file_bytes, filename)
-
-        summary_agent = AssistantAgent(
-            name="SummaryAgent",
-            system_message="""
-    You are a document summarization assistant.
-
-    Read the document text carefully and produce a clear, point-wise summary.
-
-    Rules:
-    - Give the summary in bullet points.
-    - Each point should be short and meaningful.
-    - Cover all important information present in the document.
-    - Do not repeat sentences.
-    """,
-            llm_config=build_llm_config("gpt-4.1-mini"),
-        )
-
-        summary = summary_agent.generate_reply(
-            messages=[{
-                "role": "user",
-                "content": f"Summarize the following document:\n\n{extracted_text}"
-            }]
-        )
-
-        return {
-            "status": "success",
-            "agent": "SummaryAgent",
-            "output": summary
-        }
-
-    agents_meta = load_agents_from_db(table_client)
-
-    if "Supervisor" not in agents_meta:
-        return {
-            "status": "error",
-            "message": "Supervisor agent missing in database."
-        }
-
-    supervisor_meta = agents_meta["Supervisor"]
-
-    supervisor = AssistantAgent(
-        name="Supervisor",
-        system_message=supervisor_meta["prompt"],
-        llm_config=build_llm_config(supervisor_meta["model"]),
-    )
-
-    agent_catalog = build_agent_catalog(agents_meta, file_bytes)
-
-    supervisor_input = f"""
-USER TASK:
-{task}
-
-FILE_UPLOADED:
-{"YES" if file_bytes else "NO"}
-
-AVAILABLE AGENTS:
-{agent_catalog}
-""".strip()
-
-    selected_agent = supervisor.generate_reply(
-        messages=[{"role": "user", "content": supervisor_input}]
-    ).strip()
-
-    if selected_agent == "NONE":
-        return {
-            "status": "no_suitable_agent",
-            "message": "No suitable agent found for this task."
-        }
-
-    if selected_agent not in agents_meta:
-        return {
-            "status": "error",
-            "message": "Supervisor selected an unknown agent.",
-            "raw": selected_agent
-        }
-
-    agent_meta = agents_meta[selected_agent]
+        return {"status": "error", "message": "Please provide a task."}
 
     # --------------------------------------------------
-    # SERVICE AGENT EXECUTION
+    # NO FILE CASE
     # --------------------------------------------------
 
-    if agent_meta["agent_type"] == "service":
-
-        if not file_bytes:
+    if not file_bytes:
+        if any(word in task.lower() for word in ["invoice", "receipt", "document", "extract", "summarize", "tax"]):
             return {
-                "status": "error",
-                "message": "No document provided."
+                "status": "success",
+                "agent": "System",
+                "output": "No document found."
             }
 
+    # --------------------------------------------------
+    # DOCUMENT UPLOADED FLOW
+    # --------------------------------------------------
 
+    if file_bytes:
 
-        # ----------- DOCUMENT INTELLIGENCE MODE -----------
+        doc_intent = detect_document_type_from_prompt(task)
 
-        if doc_type in DOCUMENT_TYPES.keys():
-            model_id = DOCUMENT_TYPES[doc_type]
+        if doc_intent == "invoice":
+            model_id = "prebuilt-invoice"
+            extracted = run_form_recognizer(file_bytes, model_id)
+
+        elif doc_intent == "receipt":
+            model_id = "prebuilt-receipt"
+            extracted = run_form_recognizer(file_bytes, model_id)
+
         else:
+            # GENERAL DOCUMENT → ask user confirmation
+            if task.strip().lower() in ["yes", "y"]:
+                from utils.utility import extract_text_from_file
+
+                text = extract_text_from_file(file_bytes, filename)
+
+                summary_agent = AssistantAgent(
+                    name="SummaryAgent",
+                    system_message="""
+You are a document summarization assistant.
+Provide a clear, point-by-point summary of the document in a vertical list format.
+Each point should be concise, informative, and written on a new line.
+Do not write paragraphs.
+
+""",
+                    llm_config=build_llm_config("gpt-4.1-mini"),
+                )
+
+                summary = summary_agent.generate_reply(
+                    messages=[{
+                        "role": "user",
+                        "content": f"Summarize:\n{text}"
+                    }]
+                )
+
+                return {
+                    "status": "success",
+                    "agent": "SummaryAgent",
+                    "output": summary
+                }
+
             return {
-                "status": "error",
-                "message": "Unknown document type."
+                "status": "success",
+                "agent": "System",
+                "output": "This looks like a general document. Do you want to extract data from it? (Yes/No)"
             }
 
-        output = run_form_recognizer(file_bytes, model_id)
+        # --------------------------------------------------
+        # DOC QA (Invoice/Receipt)
+        # --------------------------------------------------
 
-        extracted_text = "\n".join(
-            f"{k}: {v}" for k, v in output["raw_slim"].items()
-        )
+        extracted_text = "\n".join(f"{k}: {v}" for k, v in extracted.items())
 
         qa_agent = AssistantAgent(
             name="DocQA",
             system_message="""
 You are a document question answering assistant.
-Answer the user's question ONLY using the provided document data.
-If the answer is not present, say 'Not found in document'.
+Answer ONLY from the document data.
 """,
             llm_config=build_llm_config("gpt-4.1-mini"),
         )
@@ -318,8 +229,37 @@ User Question:
         }
 
     # --------------------------------------------------
-    # LLM AGENT EXECUTION
+    # NORMAL LLM AGENT FLOW (NO FILE)
     # --------------------------------------------------
+
+    agents_meta = load_agents_from_db(table_client)
+
+    supervisor_meta = agents_meta["Supervisor"]
+
+    supervisor = AssistantAgent(
+        name="Supervisor",
+        system_message=supervisor_meta["prompt"],
+        llm_config=build_llm_config(supervisor_meta["model"]),
+    )
+
+    agent_catalog = "\n".join(
+        f"- {n}: {m['prompt'].replace(chr(10), ' ')}"
+        for n, m in agents_meta.items() if n != "Supervisor"
+    )
+
+    supervisor_input = f"""
+USER TASK:
+{task}
+
+AVAILABLE AGENTS:
+{agent_catalog}
+"""
+
+    selected_agent = supervisor.generate_reply(
+        messages=[{"role": "user", "content": supervisor_input}]
+    ).strip()
+
+    agent_meta = agents_meta[selected_agent]
 
     agent = AssistantAgent(
         name=agent_meta["name"],
@@ -336,8 +276,3 @@ User Question:
         "agent": selected_agent,
         "output": utility.format_output(output)
     }
-
- 
- 
- 
- 
