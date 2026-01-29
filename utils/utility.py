@@ -115,11 +115,11 @@ def fetch_results(results, doc_type: str) -> Dict[str, Any]:
     
     fields = {
         "prebuilt-invoice": {
-            "fields": ["VendorName", "VendorAddress", "VendorAddressRecipient", "CustomerName", "CustomerId", "CustomerAddress", "CustomerAddressRecipient", "InvoiceId", "InvoiceDate", "InvoiceTotal", "DueDate", "PurchaseOrder", "BillingAddress", "BillingAddressRecipient", "ShippingAddress", "ShippingAddressRecipient","SubTotal", "TotalTax", "PreviousUnpaidBalance", "AmountDue", "ServiceStartDate", "ServiceEndDate", "ServiceAddress", "ServiceAddressRecipient", "RemittanceAddress", "RemittanceAddressRecipient", ],
+            "fields": ["CustomerId", "InvoiceId", "InvoiceDate", "InvoiceTotal", "DueDate", "PurchaseOrder", "SubTotal", "TotalTax", "PreviousUnpaidBalance", "AmountDue", "ServiceStartDate", "ServiceEndDate", ],
             "items": ["Description", "Quantity", "Unit", "UnitPrice", "ProductCode", "Date", "Tax", "Amount", ]
             },
         "prebuilt-receipt":{
-            "fields": ["MerchantName", "TransactionDate", "Subtotal", "TotalTax", "Tip", "Total"],
+            "fields": ["TransactionDate", "Subtotal", "TotalTax", "Tip", "Total"],
             "items": ["Description", "Quantity", "Price", "TotalPrice"]
             },
         "prebuilt-idDocument": {

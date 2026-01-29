@@ -59,7 +59,7 @@ def index():
     if request.method == "POST":
         try:
             topic = request.form.get("topic", "").strip()
-            uploaded_file = request.files.get("file")
+            uploaded_files = request.files.getlist("file")
 
             if topic.lower() == "no":
                 return jsonify({
@@ -75,36 +75,68 @@ def index():
                 flash(msg)
                 return redirect(url_for("index"))
 
-            file_bytes = None
-            filename = None
+            files_data = []
 
-            if uploaded_file and uploaded_file.filename:
-                filename = uploaded_file.filename
+            for f in uploaded_files:
+                if f and f.filename:
+                    if not is_allowed_file(f.filename):
+                        msg = "Unsupported file type."
+                        if is_ajax_request(request):
+                            return jsonify({"status": "error", "message": msg}), 400
+                        flash(msg)
+                        return redirect(url_for("index"))
 
-                if not is_allowed_file(uploaded_file.filename):
-                    msg = "Unsupported file type."
-                    if is_ajax_request(request):
-                        return jsonify({"status": "error", "message": msg}), 400
-                    flash(msg)
-                    return redirect(url_for("index"))
+                    files_data.append({
+                        "filename": f.filename,
+                        "bytes": f.read()
+                    })
 
-                file_bytes = uploaded_file.read()
 
-            result = run_pipeline(
-                task=topic,
-                table_client=table_client,
-                file_bytes=file_bytes,
-                filename=filename
-            )
+            all_outputs = []
 
-            if not isinstance(result, dict):
-                result = {"status": "success", "output": result}
+            for file in files_data:
+                result = run_pipeline(
+                    task=topic,
+                    table_client=table_client,
+                    file_bytes=file["bytes"],
+                    filename=file["filename"]
+                )
 
-            if filename:
-                result["filename"] = filename
+                all_outputs.append({
+                    "filename": file["filename"],
+                    "text": result.get("output", ""),
+                    "needs_confirmation": result.get("needs_confirmation", False)
+                })
+
+            # ✅ If only one file → behave like old system
+            if len(all_outputs) == 1:
+                final_result = {
+                    "status": "success",
+                    "agent": "System",
+                    "output": all_outputs[0]["text"],
+                    "needs_confirmation": all_outputs[0]["needs_confirmation"]
+                }
+            else:
+                # ✅ Multiple files → show per file
+                combined = ""
+                needs_confirmation = False
+
+                for o in all_outputs:
+                    combined += f"\n\nIn file {o['filename']}:\n{o['text']}\n"
+                    if o["needs_confirmation"]:
+                        needs_confirmation = True
+
+                final_result = {
+                    "status": "success",
+                    "agent": "System",
+                    "output": combined.strip(),
+                    "needs_confirmation": needs_confirmation
+                }
+
 
             if is_ajax_request(request):
-                return jsonify(result)
+                return jsonify(final_result)
+
 
         except Exception as e:
             err = {"status": "error", "message": f"Internal error: {str(e)}"}
