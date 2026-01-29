@@ -61,6 +61,13 @@ def index():
             topic = request.form.get("topic", "").strip()
             uploaded_file = request.files.get("file")
 
+            if topic.lower() == "no":
+                return jsonify({
+                    "status": "success",
+                    "agent": "System",
+                    "output": "You have ended the chat."
+                })
+
             if not topic:
                 msg = "Please enter a task."
                 if is_ajax_request(request):

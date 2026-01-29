@@ -191,7 +191,8 @@ Do not write paragraphs.
             return {
                 "status": "success",
                 "agent": "System",
-                "output": "This looks like a general document. Do you want to extract data from it? (Yes/No)"
+                "output": "This looks like a general document. Do you want me to extract data from it? ",
+                "needs_confirmation": True
             }
 
         # --------------------------------------------------
