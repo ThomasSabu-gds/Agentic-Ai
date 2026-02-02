@@ -1,41 +1,26 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
-from azure.data.tables import TableServiceClient
-from multi_agent_autogen import run_pipeline
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, make_response
+
+from multi_agent_autogen import AgenticAI, Settings
 from dotenv import load_dotenv
+from utils.utility import logger
+from memory_store import Memory
 
 # --------------------------------------------------
 # APP INIT
 # --------------------------------------------------
-
-load_dotenv()
-
 app = Flask(__name__)
-app.secret_key = os.environ.get("FLASK_SECRET_KEY", "super-secret-key")
-
-# --------------------------------------------------
-# AZURE TABLE STORAGE
-# --------------------------------------------------
-
-AZURE_CONN_STR = os.environ.get(
-    "AZURE_STORAGE_CONNECTION_STRING",
-    "UseDevelopmentStorage=true"
-)
-TABLE_NAME = "AgentsTable"
-
-service = TableServiceClient.from_connection_string(AZURE_CONN_STR)
-table_client = service.get_table_client(TABLE_NAME)
-
-try:
-    table_client.create_table()
-except Exception:
-    pass
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "super-secret-key")  # change in prod
+settings = Settings()
+GLOBAL_MEMORY = Memory()
+client = AgenticAI(settings=settings)
 
 # --------------------------------------------------
 # FILE VALIDATION
 # --------------------------------------------------
-
 ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg", "tiff", "bmp", "docx"}
+ALLOWED_DOC_TYPES = {"invoice", "receipt", "identity", "summary"}
+
 
 def is_allowed_file(filename: str) -> bool:
     if "." not in filename:
@@ -43,9 +28,10 @@ def is_allowed_file(filename: str) -> bool:
     ext = filename.rsplit(".", 1)[1].lower()
     return ext in ALLOWED_EXTENSIONS
 
-
 def is_ajax_request(req) -> bool:
+    # fetch() commonly sends this header; we add it from JS
     return req.headers.get("X-Requested-With") == "XMLHttpRequest"
+
 
 # --------------------------------------------------
 # MAIN ROUTE
@@ -59,96 +45,87 @@ def index():
     if request.method == "POST":
         try:
             topic = request.form.get("topic", "").strip()
-            uploaded_files = request.files.getlist("file")
-
-            if topic.lower() == "no":
-                return jsonify({
-                    "status": "success",
-                    "agent": "System",
-                    "output": "You have ended the chat."
-                })
+            # uploaded_files = request.files.getlist("file")
+            uploaded_files = request.files.getlist("files")
 
             if not topic:
                 msg = "Please enter a task."
                 if is_ajax_request(request):
-                    return jsonify({"status": "error", "message": msg}), 400
+                    # return jsonify({"status": "error", "message": msg}), 400
+                    
+                    resp = make_response(jsonify({"status": "error", "message": msg}), 400)
+                    sid = GLOBAL_MEMORY.get_or_create_session_id(request)
+                    GLOBAL_MEMORY.attach_session_cookie(resp, sid)
+                    return resp
+
                 flash(msg)
                 return redirect(url_for("index"))
 
-            files_data = []
-
-            for f in uploaded_files:
-                if f and f.filename:
-                    if not is_allowed_file(f.filename):
-                        msg = "Unsupported file type."
+            # Validate and prepare all uploaded files
+            files_list = []
+            for uploaded_file in uploaded_files:
+                if uploaded_file and uploaded_file.filename:
+                    if not is_allowed_file(uploaded_file.filename):
+                        msg = f"Unsupported file type: {uploaded_file.filename}"
                         if is_ajax_request(request):
-                            return jsonify({"status": "error", "message": msg}), 400
+                            # return jsonify({"status": "error", "message": msg}), 400
+                            resp = make_response(jsonify({"status": "error", "message": msg}), 400)
+                            sid = GLOBAL_MEMORY.get_or_create_session_id(request)
+                            GLOBAL_MEMORY.attach_session_cookie(resp, sid)
+                            return resp
                         flash(msg)
                         return redirect(url_for("index"))
-
-                    files_data.append({
-                        "filename": f.filename,
-                        "bytes": f.read()
+                    
+                    file_bytes = uploaded_file.read()
+                    files_list.append({
+                        "bytes": file_bytes,
+                        "filename": uploaded_file.filename
                     })
 
+            session_id = GLOBAL_MEMORY.get_or_create_session_id(request)
+            
+            # Pass all files as a list to run_pipeline
+            result = client.run_pipeline(
+                task=topic,
+                # table_client=table_client,
+                session_id=session_id,
+                memory_store=GLOBAL_MEMORY,
+                files=files_list if files_list else None,
+            )
 
-            all_outputs = []
+            # Make sure result is dict-like
+            if not isinstance(result, dict):
+                result = {"status": "success", "output": result}
 
-            for file in files_data:
-                result = run_pipeline(
-                    task=topic,
-                    table_client=table_client,
-                    file_bytes=file["bytes"],
-                    filename=file["filename"]
-                )
-
-                all_outputs.append({
-                    "filename": file["filename"],
-                    "text": result.get("output", ""),
-                    "needs_confirmation": result.get("needs_confirmation", False)
-                })
-
-            # ✅ If only one file → behave like old system
-            if len(all_outputs) == 1:
-                final_result = {
-                    "status": "success",
-                    "agent": "System",
-                    "output": all_outputs[0]["text"],
-                    "needs_confirmation": all_outputs[0]["needs_confirmation"]
-                }
-            else:
-                # ✅ Multiple files → show per file
-                combined = ""
-                needs_confirmation = False
-
-                for o in all_outputs:
-                    combined += f"\n\nIn file {o['filename']}:\n{o['text']}\n"
-                    if o["needs_confirmation"]:
-                        needs_confirmation = True
-
-                final_result = {
-                    "status": "success",
-                    "agent": "System",
-                    "output": combined.strip(),
-                    "needs_confirmation": needs_confirmation
-                }
-
-
+            # If AJAX, return JSON (no page reload)
             if is_ajax_request(request):
-                return jsonify(final_result)
+                # return jsonify(result)   
+                resp = make_response(jsonify(result))
+                GLOBAL_MEMORY.attach_session_cookie(resp, session_id)
+                return resp
 
 
         except Exception as e:
+            # Return proper error for AJAX or normal render for classic
+            logger.error(f"Internal error: {str(e)}")
             err = {"status": "error", "message": f"Internal error: {str(e)}"}
             if is_ajax_request(request):
-                return jsonify(err), 500
+                # return jsonify(err), 500     
+                resp = make_response(jsonify(err), 500)
+                sid = GLOBAL_MEMORY.get_or_create_session_id(request)
+                GLOBAL_MEMORY.attach_session_cookie(resp, sid)
+                return resp
+
             result = err
 
-    return render_template(
-        "index.html",
-        topic=topic,
-        result=result
-    )
+    # return render_template("index.html", topic=topic, result=result )
+    
+    resp = make_response(render_template("index.html", topic=topic, result=result))
+    sid = GLOBAL_MEMORY.get_or_create_session_id(request)
+    GLOBAL_MEMORY.attach_session_cookie(resp, sid)
+    return resp
+
+
 
 # --------------------------------------------------
 # AGENTS LIST
@@ -160,8 +137,9 @@ def agents_list():
     agents = []
 
     try:
-        agents = list(table_client.query_entities("PartitionKey eq 'agents'"))
+        agents = list(client.table_client.query_entities("PartitionKey eq 'agents'"))
     except Exception:
+        logger.error("Unable to access agents from the table")
         pass
 
     if request.method == "POST":
@@ -177,14 +155,16 @@ def agents_list():
 
         try:
             save_agent_to_db(
-                table_client,
+                client.table_client,
                 row_key,
                 agent_prompt,
                 model,
                 agent_type="llm"
             )
             flash(f"Agent '{agent_name}' created successfully.")
+            logger.info(f"Agent {agent_name} created successfully")
         except Exception as e:
+            logger.error("Failed to create agent")
             flash(f"Failed to create agent: {e}")
 
         return redirect(url_for("agents_list"))
@@ -194,6 +174,7 @@ def agents_list():
         agents=agents,
         allowed_models=allowed_models
     )
+
 
 # --------------------------------------------------
 # DB HELPER
@@ -224,5 +205,6 @@ def save_agent_to_db(
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 8080)))
+
 
 

@@ -635,8 +635,9 @@
         <input
           type="file"
           id="fileInput"
-          name="file"
+          name="files"
           aria-hidden="true"
+          multiple
         />
 
         <div class="uploader-dropzone" id="dropzone" role="button" tabindex="0" aria-label="Upload files">
@@ -808,6 +809,12 @@ function addMessage(text, withOptions = false) {
       syncTopic();
       topicInput.focus();
       taskField?.classList.remove("has-error");
+
+      
+      persistentFileQueue = [];
+      setInputFilesFromQueue();
+      renderFileItems();
+
     });
   }
 
@@ -1009,9 +1016,17 @@ clearChatBtn.addEventListener("click", () => {
     showLoader();
 
     try {
-      setInputFilesFromQueue();
+      // setInputFilesFromQueue();
 
       const formData = new FormData(form);
+      /////////////////
+      formData.append("topic", topicHidden.value);
+
+      // Add all uploaded files from queue
+      persistentFileQueue.forEach(file => {
+          formData.append("files", file);
+      });
+
 
       const res = await fetch("/", {
         method: "POST",
